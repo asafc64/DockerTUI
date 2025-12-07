@@ -1,40 +1,11 @@
 ﻿from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.widgets import Footer, Markdown, TabbedContent, TabPane, Tabs
+from textual.containers import Container
+from textual.widgets import Static, TabbedContent
 
-from views.containers_list_tab_pane import ContainersListTabPane
+from views.pages.containers_list_page import ContainersListPage
+from views.pages.page import Page, HomePage
 from views.shortcuts import Shortcuts
-
-ROWS = [
-    ("lane", "swimmer", "country", "time"),
-    (4, "Joseph Schooling", "Singapore", 50.39),
-    (2, "Michael Phelps", "United States", 51.14),
-    (5, "Chad le Clos", "South Africa", 51.14),
-    (6, "László Cseh", "Hungary", 51.14),
-    (3, "Li Zhuhao", "China", 51.26),
-    (8, "Mehdy Metella", "France", 51.58),
-    (7, "Tom Shields", "United States", 51.73),
-    (1, "Aleksandr Sadovnikov", "Russia", 51.84),
-    (10, "Darren Burns", "Scotland", 51.84),
-]
-
-LETO = """
-# Duke Leto I Atreides
-
-Head of House Atreides.
-"""
-
-JESSICA = """
-# Lady Jessica
-
-Bene Gesserit and concubine of Leto, and mother of Paul and Alia.
-"""
-
-PAUL = """
-# Paul Atreides
-
-Son of Leto and Jessica.
-"""
 
 
 class TabbedApp(App):
@@ -42,7 +13,14 @@ class TabbedApp(App):
 
     CSS = """
         .header{
-            dock: top
+            dock: top;
+        }
+        #page-title{
+            dock: top;
+            text-style: bold;
+            color: ansi_bright_blue;
+            border: solid ansi_bright_blue;
+            padding: 0 1;
         }
         DataTable {
             height: 1fr;
@@ -53,37 +31,37 @@ class TabbedApp(App):
 
     BINDINGS = [
         Binding("q", "quit", "Quit"),
+        Binding("escape", "back", "Back", key_display="esc", group=Binding.Group("Navigation")),
         Binding("c", "show_tab('containers')", "Containers", group=Binding.Group("Navigation")),
         Binding("v", "show_tab('volumes')", "Volumes", group=Binding.Group("Navigation")),
         Binding("i", "show_tab('images')", "Images", group=Binding.Group("Navigation")),
     ]
 
+    def __init__(self):
+        super().__init__()
+        self.current_page: Page = None
+
+    def on_mount(self):
+        self.show_page(page=ContainersListPage())
+
     def compose(self) -> ComposeResult:
-        """Compose app with tabbed content."""
-        # Footer to show keys
-        yield Footer()
-
-        # yield Static("Hello, world!", classes="header")
-
         yield Shortcuts()
-        # yield Header()
+        with Container():
+            yield Static(id="page-title")
+            yield Container(id="page-host")
 
-        # Add the TabbedContent widget
-        with TabbedContent(initial="containers", classes="tabs", id="body"):
-            yield ContainersListTabPane()
-            with TabPane("Volumes", id="volumes"):
-                yield Markdown(LETO)
-            with TabPane("Images", id="images"):
-                yield Markdown(PAUL)
+    def on_page_nav(self, nav: Page.Nav):
+       self.show_page(page=nav.page)
 
-    def action_show_tab(self, tab: str) -> None:
-        """Switch to a new tab."""
-        self.get_child_by_type(TabbedContent).active = tab
+    def action_back(self):
+        self.current_page.nav_back()
 
-    def on_tabbed_content_tab_activated(self, event: Tabs.TabActivated) -> None:
-        """Called when a tab is activated."""
-        if hasattr(event.pane, "load_data"):
-            event.pane.load_data()
+    def show_page(self, page: Page):
+        main = self.query_one("#page-host")
+        main.remove_children()
+        main.mount(page)
+        self.query_one("#page-title").update("> "+page.title)
+        self.current_page = page
 
 if __name__ == "__main__":
     app = TabbedApp()

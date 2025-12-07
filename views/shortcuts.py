@@ -30,15 +30,22 @@ class ShortcutsGrid(Widget):
     """
     def __init__(self, title: str, bindings: List[Binding]):
         super().__init__()
-        self.styles.height = 1 +len(bindings)
+
+        # Group multiple shortcut with the same action
+        actions = {}
+        for b in bindings:
+            action_key = b.description
+            actions.setdefault(action_key, []).append(b.key_display or b.key)
+
+        self.styles.height = 1 +len(actions)
         self.title = title
-        self.bindings = bindings
+        self.actions = actions
 
     def compose(self) -> ComposeResult:
         yield Label(self.title, classes="title")
-        for b in self.bindings:
-            yield Label(f"<{b.key}>", classes="binding-key")
-            yield Label(f"{b.description}")
+        for (description, hotkeys) in self.actions.items():
+            yield Label(",".join([f"<{k}>" for k in hotkeys]), classes="binding-key")
+            yield Label(description)
 
 class Shortcuts(Horizontal):
     BORDER_TITLE = "Hello Widget"

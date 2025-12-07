@@ -1,14 +1,13 @@
 ﻿from rich.text import Text
-from textual import work
+from textual import work, on
 from textual.app import ComposeResult
-from textual.widgets import TabPane, DataTable, Tabs
+from textual.widgets import DataTable
 
 from docker.api import list_containers
+from views.pages.page import Page
 
 
-class ContainersListTabPane(TabPane):
-
-    ID = "containers"
+class ContainersListPage(Page):
 
     CSS = """
            DataTable {
@@ -19,7 +18,7 @@ class ContainersListTabPane(TabPane):
        """
 
     def __init__(self):
-        super().__init__("Containers", id=self.ID)
+        super().__init__("Containers")
         self.table = DataTable(cursor_type='row')
         self.table.add_columns("", "Name", "Id", "Image", "Status")
 
@@ -28,11 +27,13 @@ class ContainersListTabPane(TabPane):
 
     def on_mount(self) -> None:
         self.table.loading = True
+        self.load_data()
 
-    def on_tabbed_content_tab_activated(self, event: Tabs.TabActivated) -> None:
-        """Called when a tab is activated."""
-        if event.pane.id:
-            pass
+    @on(DataTable.RowSelected)
+    def handle_row_selected(self, event: DataTable.RowSelected) -> None:
+        from views.pages.container_page import ContainerPage
+        container_id, container_name = event.row_key.value.split(";", 2)
+        self.nav_to(page=ContainerPage(container_name=container_name, container_id=container_id))
 
     @work
     async def load_data(self) -> None:
@@ -40,6 +41,7 @@ class ContainersListTabPane(TabPane):
         containers = await list_containers()
         self.table.clear()
         for c in containers:
+            row_key = f"{c.id};{c.name}"
             if c.state == 'exited':
                 self.table.add_row(
                     Text('⭘', style="#888888"),
@@ -47,7 +49,7 @@ class ContainersListTabPane(TabPane):
                     Text(c.id[:12], style="#888888"),
                     Text(c.image, style="#888888"),
                     Text(c.status, style="#888888"),
-                    key=c.id)
+                    key=row_key)
             else:
                 self.table.add_row(
                     Text('●', style="green"),
@@ -55,5 +57,6 @@ class ContainersListTabPane(TabPane):
                     Text(c.id[:12]),
                     Text(c.image),
                     Text(c.status),
-                    key=c.id)
+                    key=row_key)
         self.table.loading = False
+        self.table.focus()
