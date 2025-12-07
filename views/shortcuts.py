@@ -4,6 +4,7 @@ from typing import List
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Grid, Container, Horizontal, Vertical
+from textual.screen import Screen
 from textual.widget import Widget
 from textual.widgets import Label, Rule
 
@@ -65,16 +66,24 @@ class Shortcuts(Horizontal):
         
     """
 
-    def __init__(self, **kwargs) -> None:
-        super().__init__(**kwargs)
+    def bindings_changed(self, screen: Screen) -> None:
+        self.call_after_refresh(self.recompose)
+
+    def on_mount(self) -> None:
+        self.screen.bindings_updated_signal.subscribe(self, self.bindings_changed)
+
+    def on_unmount(self) -> None:
+        self.screen.bindings_updated_signal.unsubscribe(self)
 
     def compose(self) -> ComposeResult:
         groups = {}
 
         for b in self.screen.active_bindings.values():
+            if not b.binding.show:
+                continue
             group_name = b.binding.group.description if b.binding.group else "System"
             groups.setdefault(group_name, []).append(b.binding)
 
-        for (g, bs) in groups.items():
+        for (g, bs) in sorted(groups.items(), key=(lambda g: 0 if g[0] == "Navigation" else 1)):
             yield ShortcutsGrid(g, list(bs))
 

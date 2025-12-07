@@ -1,18 +1,19 @@
 ﻿from ago import human
 from textual import work
 from textual.app import ComposeResult
+from textual.binding import Binding
 from textual.containers import Container, Vertical
-from textual.reactive import reactive
 from textual.widgets import Label, Link
 
-from docker.api import get_container
+from docker.api import get_container_details
+from views.pages.container_log_page import ContainerLogPage
 from views.pages.page import Page
 
 
-class ContainerPage(Page):
+class ContainerDetailsPage(Page):
 
     DEFAULT_CSS = """
-        ContainerPage {
+        ContainerDetailsPage {
             padding: 0 1;
             overflow-y: auto;
         
@@ -24,17 +25,20 @@ class ContainerPage(Page):
                 grid-columns: auto 1fr;
             }
         }
-        
     """
 
-    status = reactive("")
+    BINDINGS = [
+        Binding("l", "show_logs", "Show logs", group=Binding.Group("Actions"))
+    ]
 
     def __init__(self, container_name: str, container_id: str):
-        super().__init__(title=f"Containers > {container_name} ({container_id[:12]})")
+        super().__init__(title=f"Containers > {container_name}")
+        self.container_name = container_name
         self.container_id = container_id
+        self.details_panel = Container(id="details-pane")
 
     def compose(self) -> ComposeResult:
-        with Container(id="details-pane"):
+        with self.details_panel:
             yield Label("Status: ")
             yield Label("", id="status")
             yield Label("Ports: ")
@@ -51,11 +55,13 @@ class ContainerPage(Page):
             yield Label("", id="volumes")
 
     def on_mount(self) -> None:
+        super().on_mount()
+        self.details_panel.loading = True
         self.load_data()
 
     @work
     async def load_data(self) -> None:
-        data = await get_container(id=self.container_id)
+        data = await get_container_details(id=self.container_id)
         self.query_one("#status", Label).update(f"{data.status} ({human(data.status_at, precision=1)})")
         await self.query_one("#ports", Vertical).mount(*[Link(f"{p[0]}/{p[1]}", url=f"http://localhost:{p[1]}") for p in data.ports])
         self.query_one("#image", Label).update(data.image)
@@ -63,6 +69,10 @@ class ContainerPage(Page):
         self.query_one("#args", Label).update("\n".join(data.args))
         self.query_one("#env", Label).update("\n".join(data.env))
         self.query_one("#volumes", Label).update("\n".join(data.volumes))
+        self.details_panel.loading = False
+
+    def action_show_logs(self):
+        self.nav_to(page=ContainerLogPage(container_name=self.container_name, container_id=self.container_id))
 
     def nav_back(self):
         from views.pages.containers_list_page import ContainersListPage

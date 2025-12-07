@@ -6,7 +6,7 @@ from textual.widgets import Static
 
 
 class Page(Widget):
-
+    can_focus = True
     class Nav(Message):
         def __init__(self, page: "Page"):
             self.page = page
@@ -15,6 +15,9 @@ class Page(Widget):
     def __init__(self, title: str):
         super().__init__()
         self.title = title
+
+    def on_mount(self):
+        self.focus()
 
     def nav_to(self, page: "Page"):
         self.post_message(self.Nav(page))
@@ -27,6 +30,7 @@ class Page(Widget):
 
 
 class HomePage(Page):
+
     def __init__(self):
         super().__init__(title="Home")
     def compose(self):

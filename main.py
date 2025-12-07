@@ -1,7 +1,7 @@
 ﻿from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Container
-from textual.widgets import Static, TabbedContent
+from textual.widgets import Static, TabbedContent, Footer
 
 from views.pages.containers_list_page import ContainersListPage
 from views.pages.page import Page, HomePage
@@ -30,7 +30,7 @@ class TabbedApp(App):
     """
 
     BINDINGS = [
-        Binding("q", "quit", "Quit"),
+        Binding("q", "quit", "Quit", group=Binding.Group("Navigation")),
         Binding("escape", "back", "Back", key_display="esc", group=Binding.Group("Navigation")),
         Binding("c", "show_tab('containers')", "Containers", group=Binding.Group("Navigation")),
         Binding("v", "show_tab('volumes')", "Volumes", group=Binding.Group("Navigation")),
