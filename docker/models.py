@@ -31,6 +31,8 @@ class ContainerDetails:
 
         self.ports = []
         for (local, host) in data["NetworkSettings"]["Ports"].items():
+            if not host:
+                continue
             local_port = local.split("/")[0]
             host_port = host[0]["HostPort"]
             self.ports.append((local_port, host_port))

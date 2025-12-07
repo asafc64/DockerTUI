@@ -31,7 +31,7 @@ class TabbedApp(App):
 
     BINDINGS = [
         Binding("q", "quit", "Quit", group=Binding.Group("Navigation")),
-        Binding("escape", "back", "Back", key_display="esc", group=Binding.Group("Navigation")),
+        Binding("escape", "back", "Back", group=Binding.Group("Navigation")),
         Binding("c", "show_tab('containers')", "Containers", group=Binding.Group("Navigation")),
         Binding("v", "show_tab('volumes')", "Volumes", group=Binding.Group("Navigation")),
         Binding("i", "show_tab('images')", "Images", group=Binding.Group("Navigation")),

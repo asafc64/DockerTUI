@@ -2,7 +2,7 @@
 from textual import work
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual.containers import Container, Vertical
+from textual.containers import Container, Vertical, ScrollableContainer
 from textual.widgets import Label, Link
 
 from docker.api import get_container_details
@@ -28,8 +28,17 @@ class ContainerDetailsPage(Page):
     """
 
     BINDINGS = [
-        Binding("l", "show_logs", "Show logs", group=Binding.Group("Actions"))
+        Binding("l", "show_logs", "Show logs", group=Binding.Group("Actions")),
+
+        Binding("up", "scroll_up", "Scroll Up", group=Binding.Group("Actions")),
+        Binding("down", "scroll_down", "Scroll Down", group=Binding.Group("Actions")),
     ]
+
+    def action_scroll_up(self):
+        self.scroll_up()
+
+    def action_scroll_down(self):
+        self.scroll_down()
 
     def __init__(self, container_name: str, container_id: str):
         super().__init__(title=f"Containers > {container_name}")
@@ -70,6 +79,7 @@ class ContainerDetailsPage(Page):
         self.query_one("#env", Label).update("\n".join(data.env))
         self.query_one("#volumes", Label).update("\n".join(data.volumes))
         self.details_panel.loading = False
+        self.focus()
 
     def action_show_logs(self):
         self.nav_to(page=ContainerLogPage(container_name=self.container_name, container_id=self.container_id))

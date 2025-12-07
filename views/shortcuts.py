@@ -4,6 +4,7 @@ from typing import List
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Grid, Container, Horizontal, Vertical
+from textual.keys import KEY_DISPLAY_ALIASES
 from textual.screen import Screen
 from textual.widget import Widget
 from textual.widgets import Label, Rule
@@ -36,7 +37,7 @@ class ShortcutsGrid(Widget):
         actions = {}
         for b in bindings:
             action_key = b.description
-            actions.setdefault(action_key, []).append(b.key_display or b.key)
+            actions.setdefault(action_key, []).append(b.key_display or KEY_DISPLAY_ALIASES.get(b.key) or b.key)
 
         self.styles.height = 1 +len(actions)
         self.title = title
@@ -45,7 +46,7 @@ class ShortcutsGrid(Widget):
     def compose(self) -> ComposeResult:
         yield Label(self.title, classes="title")
         for (description, hotkeys) in self.actions.items():
-            yield Label(",".join([f"<{k}>" for k in hotkeys]), classes="binding-key")
+            yield Label(",".join([f"{k}" for k in hotkeys]), classes="binding-key")
             yield Label(description)
 
 class Shortcuts(Horizontal):
@@ -56,8 +57,9 @@ class Shortcuts(Horizontal):
             layout: horizontal;
             width: 100%;
             height: auto;
+            padding: 0 1;
             # background: $panel;
-            color: $foreground;
+            # color: $foreground;
         }
         .nav {
              background: red;

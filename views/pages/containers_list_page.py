@@ -1,14 +1,22 @@
-﻿from rich.text import Text
+﻿import asyncio
+from dataclasses import dataclass
+
+from rich.text import Text
 from textual import work, on
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.widgets import DataTable
 
-from docker.api import list_containers
+from docker.api import list_containers, stop_container, restart_container
 from views.pages.page import Page
 
 
 class ContainersListPage(Page):
+
+    @dataclass
+    class SelectedContainer:
+        id: str
+        name: str
 
     CSS = """
            DataTable {
@@ -20,7 +28,9 @@ class ContainersListPage(Page):
 
     BINDINGS = [
         Binding("d", "show_details", "Show Details", group=Binding.Group("Actions")),
-        Binding("l", "show_logs", "Show logs", group=Binding.Group("Actions"))
+        Binding("l", "show_logs", "Show logs", group=Binding.Group("Actions")),
+        Binding("f2", "stop", "Stop", group=Binding.Group("Actions")),
+        Binding("f5", "restart", "Re/Start", group=Binding.Group("Actions")),
     ]
 
     def __init__(self):
@@ -36,24 +46,43 @@ class ContainersListPage(Page):
         self.table.loading = True
         self.load_data()
 
-    def get_selected_row_key(self) -> str:
-        return list(self.table.rows.keys())[self.table.cursor_row].value
+    @property
+    def selected_container(self) -> SelectedContainer:
+        row_key = list(self.table.rows.keys())[self.table.cursor_row].value
+        id, name = row_key.split(";", 2)
+        return ContainersListPage.SelectedContainer(id=id, name=name)
 
     def action_show_details(self):
         from views.pages.container_details_page import ContainerDetailsPage
-        id, name = self.get_selected_row_key().split(";", 2)
-        self.nav_to(page=ContainerDetailsPage(container_name=name, container_id=id))
+        c = self.selected_container
+        self.nav_to(page=ContainerDetailsPage(container_name=c.name, container_id=c.id))
 
     def action_show_logs(self):
         from views.pages.container_log_page import ContainerLogPage
-        id, name = self.get_selected_row_key().split(";", 2)
-        self.nav_to(page=ContainerLogPage(container_name=name, container_id=id))
+        c = self.selected_container
+        self.nav_to(page=ContainerLogPage(container_name=c.name, container_id=c.id))
+
+    def action_stop(self):
+        self.run_stop_work()
+
+    def action_restart(self):
+        self.run_restart_work()
 
     @on(DataTable.RowSelected)
     def handle_row_selected(self, event: DataTable.RowSelected) -> None:
         from views.pages.container_details_page import ContainerDetailsPage
-        container_id, container_name = event.row_key.value.split(";", 2)
-        self.nav_to(page=ContainerDetailsPage(container_name=container_name, container_id=container_id))
+        c = self.selected_container
+        self.nav_to(page=ContainerDetailsPage(container_name=c.name, container_id=c.id))
+
+    @work
+    async def run_stop_work(self):
+        await stop_container(id=self.selected_container.id)
+        self.load_data()
+
+    @work
+    async def run_restart_work(self):
+        await restart_container(id=self.selected_container.id)
+        self.load_data()
 
     @work
     async def load_data(self) -> None:

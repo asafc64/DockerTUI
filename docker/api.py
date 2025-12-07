@@ -22,3 +22,13 @@ async def get_container_logs(id: str) -> list[str]:
         container = await docker.containers.get(container_id=id)
         logs = await container.log(stdout=True, stderr=True, timestamps=True)
         return logs
+
+async def stop_container(id: str):
+    async with aiodocker.Docker() as docker:
+        container = await docker.containers.get(container_id=id)
+        await container.stop()
+
+async def restart_container(id: str):
+    async with aiodocker.Docker() as docker:
+        container = await docker.containers.get(container_id=id)
+        await container.restart()

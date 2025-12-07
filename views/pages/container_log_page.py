@@ -26,6 +26,7 @@ class ContainerLogPage(Page):
         for line in lines:
             log.write_line(line)
         self.loading = False
+        log.focus()
 
     def nav_back(self):
         from views.pages.containers_list_page import ContainersListPage
