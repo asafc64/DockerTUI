@@ -54,7 +54,10 @@ class TabbedApp(App):
        self.show_page(page=nav.page)
 
     def action_back(self):
-        self.current_page.nav_back()
+        if self.current_page.is_root_page:
+            self.action_help_quit()
+        else:
+            self.current_page.nav_back()
 
     def show_page(self, page: Page):
         main = self.query_one("#page-host")

@@ -7,6 +7,7 @@ from textual.widgets import Static
 
 class Page(Widget):
     can_focus = True
+    is_root_page = False
     class Nav(Message):
         def __init__(self, page: "Page"):
             self.page = page

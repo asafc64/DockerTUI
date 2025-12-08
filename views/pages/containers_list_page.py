@@ -5,10 +5,15 @@ from rich.text import Text
 from textual import work, on
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual.widgets import DataTable
+from textual.containers import Grid
+from textual.screen import ModalScreen
+from textual.widgets import DataTable, Label, Button
 
 from docker.api import list_containers, stop_container, restart_container
+from views.modals.action_verification_modal import ActionVerificationModal
 from views.pages.page import Page
+
+
 
 
 class ContainersListPage(Page):
@@ -32,6 +37,8 @@ class ContainersListPage(Page):
         Binding("f2", "stop", "Stop", group=Binding.Group("Actions")),
         Binding("f5", "restart", "Re/Start", group=Binding.Group("Actions")),
     ]
+
+    is_root_page = True
 
     def __init__(self):
         super().__init__("Containers")
@@ -62,27 +69,29 @@ class ContainersListPage(Page):
         c = self.selected_container
         self.nav_to(page=ContainerLogPage(container_name=c.name, container_id=c.id))
 
-    def action_stop(self):
-        self.run_stop_work()
+    @work
+    async def action_stop(self):
+        #
+        approved = await self.app.push_screen_wait(ActionVerificationModal(
+            title=f"Are you sure you want to stop container '{self.selected_container.name}'?",
+            button_text="Stop Container",
+            button_variant="error"
+        ))
+        if not approved:
+            return
+        await stop_container(id=self.selected_container.id)
+        self.load_data()
 
-    def action_restart(self):
-        self.run_restart_work()
+    @work
+    async def action_restart(self):
+        await restart_container(id=self.selected_container.id)
+        self.load_data()
 
     @on(DataTable.RowSelected)
     def handle_row_selected(self, event: DataTable.RowSelected) -> None:
         from views.pages.container_details_page import ContainerDetailsPage
         c = self.selected_container
         self.nav_to(page=ContainerDetailsPage(container_name=c.name, container_id=c.id))
-
-    @work
-    async def run_stop_work(self):
-        await stop_container(id=self.selected_container.id)
-        self.load_data()
-
-    @work
-    async def run_restart_work(self):
-        await restart_container(id=self.selected_container.id)
-        self.load_data()
 
     @work
     async def load_data(self) -> None:
@@ -93,7 +102,7 @@ class ContainersListPage(Page):
             row_key = f"{c.id};{c.name}"
             if c.state == 'exited':
                 self.table.add_row(
-                    Text('⭘', style="#888888"),
+                    Text('○', style="#888888"),
                     Text(c.name, style="#888888"),
                     Text(c.id[:12], style="#888888"),
                     Text(c.image, style="#888888"),
