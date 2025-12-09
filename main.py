@@ -17,6 +17,7 @@ class TabbedApp(App):
         }
         #page-host{
             border: solid $primary;
+            border-title-style: bold;
         }
         DataTable {
             height: 1fr;

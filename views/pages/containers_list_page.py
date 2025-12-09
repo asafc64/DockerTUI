@@ -2,6 +2,7 @@
 import os
 from dataclasses import dataclass
 
+from markdown_it.rules_block import table
 from rich.text import Text
 from textual import work, on
 from textual.app import ComposeResult
@@ -24,13 +25,18 @@ class ContainersListPage(Page):
         id: str
         name: str
 
-    CSS = """
-           DataTable {
-               height: 1fr;
-               overflow-y: auto;
-               width: 100%;
-           }
-       """
+    DEFAULT_CSS = """
+        #containers-table {
+            height: 1fr;
+            overflow-y: auto;
+            width: 100%;
+            background: transparent;
+            
+            .datatable--header{
+                background: transparent;
+            }
+        }
+    """
 
     BINDINGS = [
         Binding("d", "show_details", "Show Details", group=Binding.Group("Actions")),
@@ -41,10 +47,11 @@ class ContainersListPage(Page):
     ]
 
     is_root_page = True
+    last_selected_row_key = None
 
     def __init__(self):
         super().__init__("Containers")
-        self.table = DataTable(cursor_type='row')
+        self.table = DataTable(cursor_type='row', id="containers-table")
         self.table.add_columns("", "Name", "Id", "Image", "Status")
 
     def compose(self) -> ComposeResult:
@@ -56,9 +63,12 @@ class ContainersListPage(Page):
         self.load_data()
 
     @property
+    def selected_row_key(self) -> str:
+        return list(self.table.rows.keys())[self.table.cursor_row].value
+
+    @property
     def selected_container(self) -> SelectedContainer:
-        row_key = list(self.table.rows.keys())[self.table.cursor_row].value
-        id, name = row_key.split(";", 2)
+        id, name = self.selected_row_key.split(";", 2)
         return ContainersListPage.SelectedContainer(id=id, name=name)
 
     def action_show_details(self):
@@ -77,7 +87,6 @@ class ContainersListPage(Page):
 
     @work
     async def action_stop(self):
-        #
         approved = await self.app.push_screen_wait(ActionVerificationModal(
             title=f"Are you sure you want to stop container '{self.selected_container.name}'?",
             button_text="Stop Container",
@@ -97,7 +106,12 @@ class ContainersListPage(Page):
     def handle_row_selected(self, event: DataTable.RowSelected) -> None:
         from views.pages.container_details_page import ContainerDetailsPage
         c = self.selected_container
+        ContainersListPage.last_selected_row_key = self.selected_row_key
         self.nav_to(page=ContainerDetailsPage(container_name=c.name, container_id=c.id))
+
+    @on(DataTable.RowHighlighted)
+    def handle_row_highlighted(self, event: DataTable.RowHighlighted) -> None:
+        ContainersListPage.last_selected_row_key = self.selected_row_key
 
     @work
     async def load_data(self) -> None:
@@ -122,5 +136,9 @@ class ContainersListPage(Page):
                     Text(c.image),
                     Text(c.status),
                     key=row_key)
+
+            if row_key == ContainersListPage.last_selected_row_key:
+                self.table.move_cursor(row=len(self.table.rows))
+
         self.table.loading = False
         self.table.focus()
