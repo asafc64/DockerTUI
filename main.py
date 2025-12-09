@@ -3,6 +3,7 @@ from textual.binding import Binding
 from textual.containers import Container
 from textual.widgets import Static, TabbedContent, Footer
 
+from services.containers_stats_monitor import ContainersStatsMonitor
 from views.pages.containers_list_page import ContainersListPage
 from views.pages.page import Page, HomePage
 from views.shortcuts import Shortcuts
@@ -38,8 +39,12 @@ class TabbedApp(App):
         super().__init__()
         self.current_page: Page = None
 
-    def on_mount(self):
+    async def on_mount(self):
         self.show_page(page=ContainersListPage())
+        ContainersStatsMonitor.instance().start()
+
+    async def on_shutdown(self):
+        await ContainersStatsMonitor.instance().close()
 
     def compose(self) -> ComposeResult:
         yield Shortcuts()

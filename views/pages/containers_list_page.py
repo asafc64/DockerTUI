@@ -13,6 +13,7 @@ from textual.screen import ModalScreen
 from textual.widgets import DataTable, Label, Button
 
 from docker.api import list_containers, stop_container, restart_container, delete_container
+from services.containers_stats_monitor import ContainersStatsMonitor
 from views.modals.action_verification_modal import ActionVerificationModal
 from views.pages.page import Page
 
@@ -59,7 +60,8 @@ class ContainersListPage(Page):
     def __init__(self):
         super().__init__("Containers")
         self.table = DataTable(cursor_type='row', id="containers-table")
-        self.table.add_columns("", "Name", "Id", "Image", "Status")
+        self.last_hash = hash("")
+        self.table.add_columns("", "Name", "Id", "Image", "CPU", "Memory", "Status")
 
     def compose(self) -> ComposeResult:
         yield self.table
@@ -67,7 +69,9 @@ class ContainersListPage(Page):
     def on_mount(self) -> None:
         super().on_mount()
         self.table.loading = True
-        self.load_data()
+        self.table.animate = False
+        self.refresh_table_data()
+        self.set_interval(5, self.refresh_table_data)
 
     @property
     def selected_container(self) -> SelectedContainer | None:
@@ -114,7 +118,7 @@ class ContainersListPage(Page):
             self.notify(ex.message, title="Error", severity="error")
             return
         self.notify(f"Container '{self.selected_container.name}' was stopped")
-        self.load_data()
+        self.refresh_table_data()
 
     @work
     async def action_restart(self):
@@ -126,7 +130,7 @@ class ContainersListPage(Page):
             self.notify(ex.message, title="Error", severity="error")
             return
         self.notify(f"Container '{self.selected_container.name}' was restarted")
-        self.load_data()
+        self.refresh_table_data()
 
     @work
     async def action_delete(self):
@@ -145,7 +149,7 @@ class ContainersListPage(Page):
             self.notify(ex.message, title="Error", severity="error")
             return
         self.notify(f"Container '{self.selected_container.name}' was deleted")
-        self.load_data()
+        self.refresh_table_data()
 
     @on(DataTable.RowSelected)
     def handle_row_selected(self, event: DataTable.RowSelected) -> None:
@@ -162,10 +166,13 @@ class ContainersListPage(Page):
         else:
             ContainersListPage.last_selected_row_key = event.row_key.value
 
+
     @work
-    async def load_data(self) -> None:
+    async def refresh_table_data(self) -> None:
         self.table.loading = True
         containers = await list_containers()
+        containers_stats = {s.container_id:s for s in ContainersStatsMonitor.instance().get_stats()}
+
         self.table.clear()
 
         projects = {}
@@ -180,6 +187,7 @@ class ContainersListPage(Page):
                                    key=self.PROJECT_ROW_KEY_PREFIX+project_name)
 
             for i,c in enumerate(project_containers):
+                stats = containers_stats.get(c.id)
                 name = c.name if not grouped \
                        else ("├─ " if i < len(project_containers)-1 else '└─ ')+c.service
                 row_key = f"{c.id};{c.name}"
@@ -189,6 +197,8 @@ class ContainersListPage(Page):
                         Text(name, style="#888888"),
                         Text(c.id[:12], style="#888888"),
                         Text(c.image, style="#888888"),
+                        Text("", style="#888888"),
+                        Text("", style="#888888"),
                         Text(c.status, style="#888888"),
                         key=row_key)
                 else:
@@ -197,6 +207,8 @@ class ContainersListPage(Page):
                         Text(name),
                         Text(c.id[:12]),
                         Text(c.image),
+                        Text(f"{stats.cpu_usage:.2f}%" if stats else ""),
+                        Text(f"{stats.cpu_usage:.2f} MB" if stats else ""),
                         Text(c.status),
                         key=row_key)
 

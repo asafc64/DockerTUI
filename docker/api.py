@@ -14,7 +14,6 @@ async def get_container_details(id: str) -> ContainerDetails:
     async with aiodocker.Docker() as docker:
         container = await docker.containers.get(container_id=id)
         c = ContainerDetails(container)
-        stats = await container.stats(stream=False)
         return c
 
 async def get_container_logs(id: str) -> list[str]:
