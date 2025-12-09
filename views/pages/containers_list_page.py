@@ -169,7 +169,7 @@ class ContainersListPage(Page):
     @work
     async def refresh_table_data(self) -> None:
         containers = await list_containers()
-        containers_stats = {s.container_id:s for s in ContainersStatsMonitor.instance().get_stats()}
+        containers_stats = {s.container_id:s for s in ContainersStatsMonitor.instance().get_all_stats()}
 
         self.table.clear()
 
@@ -205,8 +205,8 @@ class ContainersListPage(Page):
                         Text(name),
                         Text(c.id[:12]),
                         Text(c.image),
-                        Text(f"{stats.cpu_usage:.2f}%" if stats else ""),
-                        Text(f"{stats.cpu_usage:.2f} MB" if stats else ""),
+                        Text(f"{stats.cpu_usage[-1].value:.2f}%" if stats else ""),
+                        Text(f"{stats.memory_usage[-1].value:.2f} MB" if stats else ""),
                         Text(c.status),
                         key=row_key)
 

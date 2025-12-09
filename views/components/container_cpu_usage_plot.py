@@ -1,0 +1,21 @@
+﻿from datetime import datetime
+from typing import List
+
+from services.containers_stats_monitor import ContainersStatsMonitor
+from views.components.time_series_plot import TimeSeriesPlot
+
+
+class ContainerCpuUsagePlot(TimeSeriesPlot):
+
+    def __init__(self, *, container_id: str, id: str | None = None, classes: str | None = None,):
+        super().__init__(id=id, classes=classes)
+        self.container_id = container_id
+
+    def get_data(self) -> (List[float], List[datetime]):
+        stats = ContainersStatsMonitor.instance().get_stats(container_id=self.container_id)
+        if not stats:
+            self.border_title = f"CPU Usage - <No Data>%"
+            return [], []
+
+        self.border_title = f"CPU Usage - {stats.cpu_usage[-1].value:.2f}%"
+        return [p.value for p in stats.cpu_usage], [p.timestamp for p in stats.cpu_usage]

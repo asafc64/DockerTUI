@@ -1,4 +1,6 @@
-﻿from dataclasses import dataclass
+﻿from collections import deque
+from dataclasses import dataclass
+from datetime import datetime, timedelta
 from typing import List, Dict
 
 import aiodocker
@@ -7,12 +9,17 @@ from docker.api import list_containers
 from utils.async_background import AsyncBackground
 from utils.async_background_loop import AsyncBackgroundLoop
 
+@dataclass
+class DataPoint:
+    timestamp: datetime
+    value: float
 
 @dataclass
 class ContainerStats:
     container_id: str
-    cpu_usage: float = 0.0
-    memory_usage: float = 0.0
+    cpu_usage: List[DataPoint]
+    memory_usage: List[DataPoint]
+
 
 class ContainersStatsMonitor(AsyncBackgroundLoop):
     _instance = None
@@ -27,8 +34,15 @@ class ContainersStatsMonitor(AsyncBackgroundLoop):
             cls._instance = ContainersStatsMonitor()
         return cls._instance
 
-    def get_stats(self) -> List[ContainerStats]:
+    def get_all_stats(self) -> List[ContainerStats]:
         return [l.get_stats() for l in self._listeners.values()]
+
+    def get_stats(self, container_id: str) -> ContainerStats | None:
+        listener = self._listeners.get(container_id, None)
+        if not listener:
+            return None
+
+        return listener.get_stats()
 
     async def _run_in_loop(self):
         # Clear dead listeners
@@ -57,13 +71,23 @@ class ContainerStatsListener(AsyncBackground):
     def __init__(self, container_id):
         super().__init__()
         self.container_id = container_id
-        self.cpu_usage = 0.0
-        self.memory_usage = 0.0 # in MB
+
+        self.cpu_usage = deque(maxlen=60)
+        self.memory_usage = deque(maxlen=60)
+
+        now = self.get_now_by_seconds()
+        for i in range(60, 0, -1):
+            self.cpu_usage.append(DataPoint(now - timedelta(seconds=i), 0.0))
+            self.memory_usage.append(DataPoint(now - timedelta(seconds=i), 0.0))
+
+    @staticmethod
+    def get_now_by_seconds() -> datetime:
+        return datetime.now().replace(microsecond=0)
 
     def get_stats(self) -> ContainerStats:
         return ContainerStats(container_id=self.container_id,
-                              cpu_usage=self.cpu_usage,
-                              memory_usage=self.memory_usage)
+                              cpu_usage=list(self.cpu_usage),
+                              memory_usage=list(self.memory_usage))
 
     async def _run(self):
         async with aiodocker.Docker() as docker:
@@ -76,8 +100,10 @@ class ContainerStatsListener(AsyncBackground):
                         prev_stats = new_stats
                         continue
 
-                    self.cpu_usage = self._calc_cpu_percent(prev_stats, new_stats)
-                    self.memory_usage = self._calc_memory_usage(new_stats)
+                    self.cpu_usage.append(DataPoint(timestamp=self.get_now_by_seconds(),
+                                                    value=self._calc_cpu_percent(prev_stats, new_stats)))
+                    self.memory_usage.append(DataPoint(timestamp=self.get_now_by_seconds(),
+                                                       value=self._calc_memory_usage(new_stats)))
 
                     # print(self.container_id)
                     # print(f"CPU Usage:    {self.cpu_usage:.2f}%")

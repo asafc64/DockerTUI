@@ -2,10 +2,12 @@
 from textual import work
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual.containers import Container, Vertical, ScrollableContainer
+from textual.containers import Container, Vertical, ScrollableContainer, Horizontal
 from textual.widgets import Label, Link
 
 from docker.api import get_container_details
+from views.components.container_cpu_usage_plot import ContainerCpuUsagePlot
+from views.components.container_memory_usage_plot import ContainerMemoryUsagePlot
 from views.pages.container_log_page import ContainerLogPage
 from views.pages.page import Page
 
@@ -14,15 +16,28 @@ class ContainerDetailsPage(Page):
 
     DEFAULT_CSS = """
         ContainerDetailsPage {
+
+            layout: horizontal;
             padding: 0 1;
-            overflow-y: auto;
-        
+            overflow-y: scroll;
+          
             #details-pane {
                 layout: grid;
                 height: auto;
                 width: 1fr;
                 grid-size: 2;
                 grid-columns: auto 1fr;
+                grid-gutter: 1;
+            }
+            
+            #plots-host {
+                width: 1fr;
+                height: auto;
+            }
+            
+            .stat-plot{
+                height: 12;
+                margin: 0 1 1 1 ;
             }
         }
     """
@@ -47,7 +62,8 @@ class ContainerDetailsPage(Page):
         self.details_panel = Container(id="details-pane")
 
     def compose(self) -> ComposeResult:
-        with self.details_panel:
+
+        with Container(id="details-pane"):
             yield Label("Status: ")
             yield Label("", id="status")
             yield Label("Ports: ")
@@ -62,10 +78,13 @@ class ContainerDetailsPage(Page):
             yield Label("", id="env")
             yield Label("Volumes: ")
             yield Label("", id="volumes")
+        with Vertical(id="plots-host"):
+            yield ContainerCpuUsagePlot(container_id=self.container_id, classes="stat-plot")
+            yield ContainerMemoryUsagePlot(container_id=self.container_id, classes="stat-plot")
 
     def on_mount(self) -> None:
         super().on_mount()
-        self.details_panel.loading = True
+        self.loading = True
         self.load_data()
 
     @work
@@ -78,7 +97,7 @@ class ContainerDetailsPage(Page):
         self.query_one("#args", Label).update("\n".join(data.args))
         self.query_one("#env", Label).update("\n".join(data.env))
         self.query_one("#volumes", Label).update("\n".join(data.volumes))
-        self.details_panel.loading = False
+        self.loading = False
         self.focus()
 
     def action_show_logs(self):
