@@ -7,11 +7,13 @@ from aiodocker.containers import DockerContainer
 class Container:
     def __init__(self, data: DockerContainer):
         self.id = data["Id"]
-        self.name = data["Names"][0]
+        self.name = data["Names"][0].lstrip('/')
         self.image = data["Image"]
         self.state = data["State"]
         self.status = data["Status"]
         self.created_at = datetime.fromtimestamp(data["Created"])
+        self.project = data["Labels"].get("com.docker.compose.project")
+        self.service = data["Labels"].get("com.docker.compose.service")
 
 class ContainerDetails:
     def __init__(self, data: DockerContainer):

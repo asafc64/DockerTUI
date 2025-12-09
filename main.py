@@ -16,7 +16,7 @@ class TabbedApp(App):
             dock: top;
         }
         #page-host{
-            border: solid $primary;
+            border: round $primary;
             border-title-style: bold;
         }
         DataTable {
