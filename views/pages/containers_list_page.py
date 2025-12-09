@@ -1,4 +1,5 @@
 ﻿import asyncio
+import os
 from dataclasses import dataclass
 
 from rich.text import Text
@@ -34,6 +35,7 @@ class ContainersListPage(Page):
     BINDINGS = [
         Binding("d", "show_details", "Show Details", group=Binding.Group("Actions")),
         Binding("l", "show_logs", "Show logs", group=Binding.Group("Actions")),
+        Binding("e", "exec", "Exec", group=Binding.Group("Actions")),
         Binding("f2", "stop", "Stop", group=Binding.Group("Actions")),
         Binding("f5", "restart", "Re/Start", group=Binding.Group("Actions")),
     ]
@@ -68,6 +70,10 @@ class ContainersListPage(Page):
         from views.pages.container_log_page import ContainerLogPage
         c = self.selected_container
         self.nav_to(page=ContainerLogPage(container_name=c.name, container_id=c.id))
+
+    def action_exec(self):
+        with self.app.suspend():
+            os.system(f"docker exec -it {self.selected_container.id} sh")
 
     @work
     async def action_stop(self):
