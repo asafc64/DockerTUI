@@ -68,7 +68,6 @@ class ContainersListPage(Page):
 
     def on_mount(self) -> None:
         super().on_mount()
-        self.table.loading = True
         self.table.animate = False
         self.refresh_table_data()
         self.set_interval(5, self.refresh_table_data)
@@ -169,7 +168,6 @@ class ContainersListPage(Page):
 
     @work
     async def refresh_table_data(self) -> None:
-        self.table.loading = True
         containers = await list_containers()
         containers_stats = {s.container_id:s for s in ContainersStatsMonitor.instance().get_stats()}
 
@@ -215,5 +213,4 @@ class ContainersListPage(Page):
                 if row_key == ContainersListPage.last_selected_row_key:
                     self.table.move_cursor(row=len(self.table.rows))
 
-        self.table.loading = False
         self.table.focus()
