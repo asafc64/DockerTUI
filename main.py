@@ -15,12 +15,8 @@ class TabbedApp(App):
         .header{
             dock: top;
         }
-        #page-title{
-            dock: top;
-            text-style: bold;
-            color: ansi_bright_blue;
-            border: solid ansi_bright_blue;
-            padding: 0 1;
+        #page-host{
+            border: solid $primary;
         }
         DataTable {
             height: 1fr;
@@ -47,7 +43,6 @@ class TabbedApp(App):
     def compose(self) -> ComposeResult:
         yield Shortcuts()
         with Container():
-            yield Static(id="page-title")
             yield Container(id="page-host")
 
     def on_page_nav(self, nav: Page.Nav):
@@ -63,7 +58,7 @@ class TabbedApp(App):
         main = self.query_one("#page-host")
         main.remove_children()
         main.mount(page)
-        self.query_one("#page-title").update("> "+page.title)
+        self.query_one("#page-host").border_title = page.title
         self.current_page = page
 
 if __name__ == "__main__":
