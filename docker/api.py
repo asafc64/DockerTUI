@@ -32,3 +32,8 @@ async def restart_container(id: str):
     async with aiodocker.Docker() as docker:
         container = await docker.containers.get(container_id=id)
         await container.restart()
+
+async def delete_container(id: str):
+    async with aiodocker.Docker() as docker:
+        container = await docker.containers.get(container_id=id)
+        await container.delete()

@@ -2,6 +2,7 @@
 import os
 from dataclasses import dataclass
 
+from aiodocker import DockerError
 from markdown_it.rules_block import table
 from rich.text import Text
 from textual import work, on
@@ -11,7 +12,7 @@ from textual.containers import Grid
 from textual.screen import ModalScreen
 from textual.widgets import DataTable, Label, Button
 
-from docker.api import list_containers, stop_container, restart_container
+from docker.api import list_containers, stop_container, restart_container, delete_container
 from views.modals.action_verification_modal import ActionVerificationModal
 from views.pages.page import Page
 
@@ -45,8 +46,9 @@ class ContainersListPage(Page):
         Binding("d", "show_details", "Show Details", group=Binding.Group("Actions")),
         Binding("l", "show_logs", "Show logs", group=Binding.Group("Actions")),
         Binding("e", "exec", "Exec", group=Binding.Group("Actions")),
-        Binding("f2", "stop", "Stop", group=Binding.Group("Actions")),
-        Binding("f5", "restart", "Re/Start", group=Binding.Group("Actions")),
+        Binding("k", "stop", "Stop", group=Binding.Group("Actions")),
+        Binding("r", "restart", "Restart", group=Binding.Group("Actions")),
+        Binding("delete", "delete", "Delete", group=Binding.Group("Actions")),
     ]
 
     PROJECT_ROW_KEY_PREFIX = "#project#row#"
@@ -106,14 +108,43 @@ class ContainersListPage(Page):
         ))
         if not approved:
             return
-        await stop_container(id=self.selected_container.id)
+        try:
+            await stop_container(id=self.selected_container.id)
+        except DockerError as ex:
+            self.notify(ex.message, title="Error", severity="error")
+            return
+        self.notify(f"Container '{self.selected_container.name}' was stopped")
         self.load_data()
 
     @work
     async def action_restart(self):
         if not self.selected_container:
             return
-        await restart_container(id=self.selected_container.id)
+        try:
+            await restart_container(id=self.selected_container.id)
+        except DockerError as ex:
+            self.notify(ex.message, title="Error", severity="error")
+            return
+        self.notify(f"Container '{self.selected_container.name}' was restarted")
+        self.load_data()
+
+    @work
+    async def action_delete(self):
+        if not self.selected_container:
+            return
+        approved = await self.app.push_screen_wait(ActionVerificationModal(
+            title=f"Are you sure you want to delete container '{self.selected_container.name}'?",
+            button_text="Delete Container",
+            button_variant="error"
+        ))
+        if not approved:
+            return
+        try:
+            await delete_container(id=self.selected_container.id)
+        except DockerError as ex:
+            self.notify(ex.message, title="Error", severity="error")
+            return
+        self.notify(f"Container '{self.selected_container.name}' was deleted")
         self.load_data()
 
     @on(DataTable.RowSelected)
