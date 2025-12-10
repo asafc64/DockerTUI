@@ -1,9 +1,13 @@
-﻿from textual.app import App, ComposeResult
+﻿from textual import work
+from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Container
 from textual.widgets import Static, TabbedContent, Footer
 
 from services.containers_stats_monitor import ContainersStatsMonitor
+from views.modals.search_modal import SearchModal, SearchOption
+from views.pages.container_details_page import ContainerDetailsPage
+from views.pages.container_log_page import ContainerLogPage
 from views.pages.containers_list_page import ContainersListPage
 from views.pages.page import Page, HomePage
 from views.shortcuts import Shortcuts
@@ -30,9 +34,10 @@ class TabbedApp(App):
     BINDINGS = [
         Binding("q", "quit", "Quit", group=Binding.Group("Navigation")),
         Binding("escape", "back", "Back", group=Binding.Group("Navigation")),
-        Binding("c", "show_tab('containers')", "Containers", group=Binding.Group("Navigation")),
-        Binding("v", "show_tab('volumes')", "Volumes", group=Binding.Group("Navigation")),
-        Binding("i", "show_tab('images')", "Images", group=Binding.Group("Navigation")),
+        Binding("s", "search", "Search", group=Binding.Group("Navigation")),
+        # Binding("c", "show_tab('containers')", "Containers", group=Binding.Group("Navigation")),
+        # Binding("v", "show_tab('volumes')", "Volumes", group=Binding.Group("Navigation")),
+        # Binding("i", "show_tab('images')", "Images", group=Binding.Group("Navigation")),
     ]
 
     def __init__(self):
@@ -59,6 +64,34 @@ class TabbedApp(App):
             self.action_help_quit()
         else:
             self.current_page.nav_back()
+
+    @work
+    async def action_search(self):
+        # Pages
+        options = [
+            SearchOption("Containers", "Page", "goto_containers_list"),
+        ]
+        # Containers
+        containers = ContainersStatsMonitor.instance().get_all_containers()
+        for c in containers:
+            options.append(SearchOption(c.name, "Container > Info", f"goto_container_info_{c.id}", [c.id, c.name]))
+            options.append(SearchOption(c.name, "Container > Logs", f"goto_container_logs_{c.id}", [c.id, c.name]))
+
+        selected = await self.push_screen_wait(SearchModal(options=options))
+        if not selected:
+            return
+
+        if selected.id == "goto_containers_list":
+            self.show_page(ContainersListPage())
+        if selected.id.startswith("goto_container_info"):
+            container_id = selected.args[0]
+            container_name = selected.args[1]
+            self.show_page(ContainerDetailsPage(container_id=container_id, container_name=container_name))
+        if selected.id.startswith("goto_container_logs"):
+            container_id = selected.args[0]
+            container_name = selected.args[1]
+            self.show_page(ContainerLogPage(container_id=container_id, container_name=container_name))
+        pass
 
     def show_page(self, page: Page):
         main = self.query_one("#page-host")

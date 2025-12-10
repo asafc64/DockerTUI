@@ -6,6 +6,7 @@ from typing import List, Dict
 import aiodocker
 
 from docker.api import list_containers
+from docker.models import Container
 from utils.async_background import AsyncBackground
 from utils.async_background_loop import AsyncBackgroundLoop
 
@@ -26,6 +27,7 @@ class ContainersStatsMonitor(AsyncBackgroundLoop):
 
     def __init__(self):
         super().__init__()
+        self._containers: List[Container] = []
         self._listeners: Dict[str, ContainerStatsListener] = {}
 
     @classmethod
@@ -33,6 +35,9 @@ class ContainersStatsMonitor(AsyncBackgroundLoop):
         if not cls._instance:
             cls._instance = ContainersStatsMonitor()
         return cls._instance
+
+    def get_all_containers(self) -> List[Container]:
+        return self._containers
 
     def get_all_stats(self) -> List[ContainerStats]:
         return [l.get_stats() for l in self._listeners.values()]
@@ -51,15 +56,15 @@ class ContainersStatsMonitor(AsyncBackgroundLoop):
                 self._listeners.pop(id)
 
         # Create new listeners if needed
-        containers = await list_containers()
-        for c in containers:
+        self._containers = await list_containers()
+        for c in self._containers:
             if c.state == "running" and c.id not in self._listeners:
                 new_listener = ContainerStatsListener(container_id=c.id)
                 new_listener.start()
                 self._listeners[c.id] = new_listener
 
         # Delete existing listeners  if needed
-        for c in containers:
+        for c in self._containers:
             if c.state != "running" and c.id in self._listeners:
                 old_listener = self._listeners.pop(c.id)
                 await old_listener.close()
