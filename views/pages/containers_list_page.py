@@ -63,7 +63,6 @@ class ContainersListPage(Page):
     def __init__(self):
         super().__init__("Containers")
         self.table = DataTable(cursor_type='row', id="containers-table")
-        self.last_hash = hash("")
         self.table.add_columns("", "Name", "Id", "Image", "CPU", "Memory", "Status")
 
     def compose(self) -> ComposeResult:
