@@ -40,6 +40,9 @@ class ContainersListPage(Page):
             .datatable--hover, .datatable--cursor{
                 text-style: none;
             }
+            #containers-table .column--name {
+                width: 100;
+            }
         }
     """
 
@@ -68,7 +71,6 @@ class ContainersListPage(Page):
 
     def on_mount(self) -> None:
         super().on_mount()
-        self.table.animate = False
         self.refresh_table_data()
         self.set_interval(5, self.refresh_table_data)
 
