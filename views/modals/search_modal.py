@@ -1,5 +1,6 @@
 ﻿from abc import ABC
 from dataclasses import dataclass
+from itertools import groupby
 from typing import List, Callable, Any
 
 from rapidfuzz import fuzz, utils
@@ -19,6 +20,7 @@ from textual.widgets._option_list import Option
 class SearchOption:
     text: str
     type: str
+    type_priority: int
     id: str
     args: List[Any] = None
 
@@ -71,13 +73,25 @@ class SearchModal(ModalScreen[SearchOption]):
             if score_align:
                 matches.append(SearchModal.Match(option=option, score=score_align))
 
+        matches_by_type = {}
+        for m in matches:
+            matches_by_type.setdefault(m.option.type_priority, []).append(m)
+
         renderable_options = []
 
-        for m in sorted(matches, key=(lambda x: x.score.score), reverse=True):
-            primary = Text(" " + m.option.text, overflow="ellipsis")
-            primary.stylize(style="blue", start=m.score.dest_start + 1, end=m.score.dest_end + 1)
-            secondary = Text(m.option.type + " ", style="#888888", justify="right")
-            renderable_options.append(Option(Columns([primary,secondary], expand=True), id=m.option.id))
+        for (_, grouped_matches) in sorted(matches_by_type.items(), key=(lambda g: g[0])):
+            for m in grouped_matches:
+                primary = Text(" " + m.option.text, overflow="ellipsis")
+                primary.stylize(style="blue", start=m.score.dest_start + 1, end=m.score.dest_end + 1)
+                secondary = Text(m.option.type + " ", style="#888888", justify="right")
+                renderable_options.append(Option(Columns([primary, secondary], expand=True), id=m.option.id))
+            renderable_options.append(None)
+            
+        # for m in sorted(matches, key=(lambda x: x.score.score), reverse=True):
+        #     primary = Text(" " + m.option.text, overflow="ellipsis")
+        #     primary.stylize(style="blue", start=m.score.dest_start + 1, end=m.score.dest_end + 1)
+        #     secondary = Text(m.option.type + " ", style="#888888", justify="right")
+        #     renderable_options.append(Option(Columns([primary,secondary], expand=True), id=m.option.id))
 
         async with self.list_view.batch():
             self.list_view.clear_options()

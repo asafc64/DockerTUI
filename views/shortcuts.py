@@ -1,5 +1,4 @@
-﻿from itertools import groupby
-from typing import List
+﻿from typing import List
 
 from textual.app import ComposeResult
 from textual.binding import Binding

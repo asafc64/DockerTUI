@@ -69,13 +69,14 @@ class TabbedApp(App):
     async def action_search(self):
         # Pages
         options = [
-            SearchOption("Containers", "Page", "goto_containers_list"),
+            SearchOption("Containers", "Page", 1, "goto_containers_list"),
         ]
+
         # Containers
         containers = ContainersStatsMonitor.instance().get_all_containers()
         for c in containers:
-            options.append(SearchOption(c.name, "Container > Info", f"goto_container_info_{c.id}", [c.id, c.name]))
-            options.append(SearchOption(c.name, "Container > Logs", f"goto_container_logs_{c.id}", [c.id, c.name]))
+            options.append(SearchOption(c.name, "Container > Info", 2, f"goto_container_info_{c.id}", [c.id, c.name]))
+            options.append(SearchOption(c.name, "Container > Logs", 3, f"goto_container_logs_{c.id}", [c.id, c.name]))
 
         selected = await self.push_screen_wait(SearchModal(options=options))
         if not selected:
@@ -83,15 +84,16 @@ class TabbedApp(App):
 
         if selected.id == "goto_containers_list":
             self.show_page(ContainersListPage())
+
         if selected.id.startswith("goto_container_info"):
             container_id = selected.args[0]
             container_name = selected.args[1]
             self.show_page(ContainerDetailsPage(container_id=container_id, container_name=container_name))
+
         if selected.id.startswith("goto_container_logs"):
             container_id = selected.args[0]
             container_name = selected.args[1]
             self.show_page(ContainerLogPage(container_id=container_id, container_name=container_name))
-        pass
 
     def show_page(self, page: Page):
         main = self.query_one("#page-host")
