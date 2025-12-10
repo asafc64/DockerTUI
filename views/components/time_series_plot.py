@@ -14,7 +14,7 @@ class TimeSeriesPlot(Widget):
             TimeSeriesPlot{
                 border: blank $primary;
                 border-title-style: bold;
-                background: $surface;
+                # background: $surface;
             }
         """
 
@@ -22,7 +22,10 @@ class TimeSeriesPlot(Widget):
         super().__init__(id=id, classes=classes)
         self.plotext = PlotextPlot(id="plot-host")
         self.plt = self.plotext.plt
-        self.plt.date_form("d/m/Y H:M:S")
+        self.plt.canvas_color("none")
+        self.plt.axes_color("none")
+        self.plt.ticks_color("none")
+        self.plt.date_form("d/m/Y H:M:S", output_form="H:M:S")
 
     def compose(self) -> ComposeResult:
         yield self.plotext
