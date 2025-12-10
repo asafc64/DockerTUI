@@ -1,23 +1,17 @@
-﻿import asyncio
-import os
+﻿import os
 from dataclasses import dataclass
 
 from aiodocker import DockerError
-from markdown_it.rules_block import table
 from rich.text import Text
 from textual import work, on
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual.containers import Grid
-from textual.screen import ModalScreen
-from textual.widgets import DataTable, Label, Button
+from textual.widgets import DataTable
 
 from docker.api import list_containers, stop_container, restart_container, delete_container
 from services.containers_stats_monitor import ContainersStatsMonitor
 from views.modals.action_verification_modal import ActionVerificationModal
 from views.pages.page import Page
-
-
 
 
 class ContainersListPage(Page):
@@ -47,9 +41,9 @@ class ContainersListPage(Page):
     """
 
     BINDINGS = [
-        Binding("d", "show_details", "Show Details", group=Binding.Group("Actions")),
-        Binding("l", "show_logs", "Show logs", group=Binding.Group("Actions")),
-        Binding("e", "exec", "Exec", group=Binding.Group("Actions")),
+        Binding("d", "show_details", "Show Details", group=Binding.Group("Inspect")),
+        Binding("l", "show_logs", "Show logs", group=Binding.Group("Inspect")),
+        Binding("e", "exec", "Exec", group=Binding.Group("Inspect")),
         Binding("k", "stop", "Stop", group=Binding.Group("Actions")),
         Binding("r", "restart", "Restart", group=Binding.Group("Actions")),
         Binding("delete", "delete", "Delete", group=Binding.Group("Actions")),

@@ -43,10 +43,8 @@ class ContainerDetailsPage(Page):
     """
 
     BINDINGS = [
-        Binding("l", "show_logs", "Show logs", group=Binding.Group("Actions")),
-
-        Binding("up", "scroll_up", "Scroll Up", group=Binding.Group("Actions")),
-        Binding("down", "scroll_down", "Scroll Down", group=Binding.Group("Actions")),
+        Binding("up", "scroll_up", "Scroll Up", group=Binding.Group("Browse")),
+        Binding("down", "scroll_down", "Scroll Down", group=Binding.Group("Browse")),
     ]
 
     def action_scroll_up(self):
@@ -99,9 +97,6 @@ class ContainerDetailsPage(Page):
         self.query_one("#volumes", Label).update("\n".join(data.volumes))
         self.loading = False
         self.focus()
-
-    def action_show_logs(self):
-        self.nav_to(page=ContainerLogPage(container_name=self.container_name, container_id=self.container_id))
 
     def nav_back(self):
         from views.pages.containers_list_page import ContainersListPage
