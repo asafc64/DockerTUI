@@ -3,6 +3,7 @@
 *.pyo
 .env
 .venv/
+.idea/
 dist/
 build/
 *.egg-info/
