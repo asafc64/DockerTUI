@@ -1,0 +1,27 @@
+[project]
+name = "docker-tui"
+version = "0.1.0"
+description = "A console user interface for docker"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+  { name = "Assaf" }
+]
+
+[dependencies]
+textual = "6.8.0"
+textual_plotext = "1.0.1"
+aiodocker = "0.24.0"
+rapidfuzz = "3.14.3"
+
+[project.urls]
+Repository = "https://github.com/asafc64/DockerTUI.git"
+Issues = "https://github.com/asafc64/DockerTUI/issues"
+
+[project.scripts]
+dtui = "docker_tui.cli:main"
+
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"

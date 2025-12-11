@@ -2,14 +2,13 @@
 from textual import work
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual.containers import Container, Vertical, ScrollableContainer, Horizontal
+from textual.containers import Container, Vertical
 from textual.widgets import Label, Link
 
-from docker.api import get_container_details
-from views.components.container_cpu_usage_plot import ContainerCpuUsagePlot
-from views.components.container_memory_usage_plot import ContainerMemoryUsagePlot
-from views.pages.container_log_page import ContainerLogPage
-from views.pages.page import Page
+from docker_tui.docker.api import get_container_details
+from docker_tui.views.components.container_cpu_usage_plot import ContainerCpuUsagePlot
+from docker_tui.views.components.container_memory_usage_plot import ContainerMemoryUsagePlot
+from docker_tui.views.pages.page import Page
 
 
 class ContainerDetailsPage(Page):
@@ -99,5 +98,5 @@ class ContainerDetailsPage(Page):
         self.focus()
 
     def nav_back(self):
-        from views.pages.containers_list_page import ContainersListPage
+        from docker_tui.views.pages.containers_list_page import ContainersListPage
         self.nav_to(page=ContainersListPage())

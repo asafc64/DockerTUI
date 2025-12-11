@@ -2,7 +2,7 @@
 import logging
 from abc import abstractmethod
 
-from utils.async_background import AsyncBackground
+from docker_tui.utils.async_background import AsyncBackground
 
 logger = logging.getLogger(__name__)
 

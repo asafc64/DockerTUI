@@ -5,10 +5,10 @@ from typing import List, Dict
 
 import aiodocker
 
-from docker.api import list_containers
-from docker.models import Container
-from utils.async_background import AsyncBackground
-from utils.async_background_loop import AsyncBackgroundLoop
+from docker_tui.docker.api import list_containers
+from docker_tui.docker.models import Container
+from docker_tui.utils.async_background import AsyncBackground
+from docker_tui.utils.async_background_loop import AsyncBackgroundLoop
 
 @dataclass
 class DataPoint:

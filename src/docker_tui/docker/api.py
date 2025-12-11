@@ -2,7 +2,7 @@
 
 import aiodocker
 
-from docker.models import Container, ContainerDetails
+from docker_tui.docker.models import Container, ContainerDetails
 
 
 async def list_containers() -> List[Container]:

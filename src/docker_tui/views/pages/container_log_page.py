@@ -2,8 +2,8 @@
 from textual.app import ComposeResult
 from textual.widgets import Log
 
-from docker.api import get_container_logs
-from views.pages.page import Page
+from docker_tui.docker.api import get_container_logs
+from docker_tui.views.pages.page import Page
 
 
 class ContainerLogPage(Page):
@@ -29,5 +29,5 @@ class ContainerLogPage(Page):
         log.focus()
 
     def nav_back(self):
-        from views.pages.containers_list_page import ContainersListPage
+        from docker_tui.views.pages.containers_list_page import ContainersListPage
         self.nav_to(page=ContainersListPage())

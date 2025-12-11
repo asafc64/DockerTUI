@@ -2,15 +2,14 @@
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Container
-from textual.widgets import Static, TabbedContent, Footer
 
-from services.containers_stats_monitor import ContainersStatsMonitor
-from views.modals.search_modal import SearchModal, SearchOption
-from views.pages.container_details_page import ContainerDetailsPage
-from views.pages.container_log_page import ContainerLogPage
-from views.pages.containers_list_page import ContainersListPage
-from views.pages.page import Page, HomePage
-from views.shortcuts import Shortcuts
+from docker_tui.services.containers_stats_monitor import ContainersStatsMonitor
+from docker_tui.views.modals.search_modal import SearchModal, SearchOption
+from docker_tui.views.pages.container_details_page import ContainerDetailsPage
+from docker_tui.views.pages.container_log_page import ContainerLogPage
+from docker_tui.views.pages.containers_list_page import ContainersListPage
+from docker_tui.views.pages.page import Page
+from docker_tui.views.shortcuts import Shortcuts
 
 
 class TabbedApp(App):
@@ -102,6 +101,9 @@ class TabbedApp(App):
         self.query_one("#page-host").border_title = page.title
         self.current_page = page
 
-if __name__ == "__main__":
+def main():
     app = TabbedApp()
     app.run()
+
+if __name__ == "__main__":
+    main()

@@ -8,10 +8,10 @@ from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.widgets import DataTable
 
-from docker.api import list_containers, stop_container, restart_container, delete_container
-from services.containers_stats_monitor import ContainersStatsMonitor
-from views.modals.action_verification_modal import ActionVerificationModal
-from views.pages.page import Page
+from docker_tui.docker.api import list_containers, stop_container, restart_container, delete_container
+from docker_tui.services.containers_stats_monitor import ContainersStatsMonitor
+from docker_tui.views.modals.action_verification_modal import ActionVerificationModal
+from docker_tui.views.pages.page import Page
 
 
 class ContainersListPage(Page):
@@ -78,14 +78,14 @@ class ContainersListPage(Page):
     def action_show_details(self):
         if not self.selected_container:
             return
-        from views.pages.container_details_page import ContainerDetailsPage
+        from docker_tui.views.pages.container_details_page import ContainerDetailsPage
         self.nav_to(page=ContainerDetailsPage(container_name=self.selected_container.name,
                                               container_id=self.selected_container.id))
 
     def action_show_logs(self):
         if not self.selected_container:
             return
-        from views.pages.container_log_page import ContainerLogPage
+        from docker_tui.views.pages.container_log_page import ContainerLogPage
         self.nav_to(page=ContainerLogPage(container_name=self.selected_container.name,
                                           container_id=self.selected_container.id))
 
@@ -149,7 +149,7 @@ class ContainersListPage(Page):
     def handle_row_selected(self, event: DataTable.RowSelected) -> None:
         if not self.selected_container:
             return
-        from views.pages.container_details_page import ContainerDetailsPage
+        from docker_tui.views.pages.container_details_page import ContainerDetailsPage
         self.nav_to(page=ContainerDetailsPage(container_name=self.selected_container.name,
                                               container_id=self.selected_container.id))
 
