@@ -12,7 +12,7 @@ from docker_tui.views.pages.page import Page
 from docker_tui.views.shortcuts import Shortcuts
 
 
-class TabbedApp(App):
+class DockerTuiApp(App):
     """An example of tabbed content."""
 
     CSS = """
@@ -102,7 +102,7 @@ class TabbedApp(App):
         self.current_page = page
 
 def main():
-    app = TabbedApp()
+    app = DockerTuiApp()
     app.run()
 
 if __name__ == "__main__":
