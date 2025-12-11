@@ -1,13 +1,11 @@
-﻿from abc import ABC
-from dataclasses import dataclass
-from itertools import groupby
-from typing import List, Callable, Any
+﻿from dataclasses import dataclass
+from typing import List, Any
 
 from rapidfuzz import fuzz, utils
 from rapidfuzz.distance import ScoreAlignment
 from rich.columns import Columns
 from rich.text import Text
-from textual import on
+from textual import on, events
 from textual.app import ComposeResult
 from textual.containers import Container
 from textual.events import Key
@@ -19,12 +17,27 @@ from textual.widgets._option_list import Option
 @dataclass
 class SearchOption:
     text: str
-    type: str
-    type_priority: int
+    group: str
+    group_priority: int
     id: str
     args: List[Any] = None
 
 class SearchModal(ModalScreen[SearchOption]):
+
+    @dataclass
+    class OptionsGroup:
+        name: str
+        priority: int
+        options: List[SearchOption]
+
+    @dataclass
+    class Match:
+        option: SearchOption
+        score: float
+        start_idx: int
+        end_idx: int
+
+
     DEFAULT_CSS = """
         SearchModal {
             align: center top;
@@ -45,53 +58,72 @@ class SearchModal(ModalScreen[SearchOption]):
             grid-rows: auto 1fr;
         }
     """
+    MAX_RESULTS = 100
 
     def __init__(self, options: List[SearchOption]):
         super().__init__()
         self.input = Input(id="search-box", placeholder="Search...")
         self.list_view = OptionList(id="search-results")
         self.list_view.can_focus = False
-        self.options = options
+        self.all_options = options
+        self.grouped_options = SearchModal.get_sorted_grouped_options(options)
 
     def compose(self) -> ComposeResult:
         with Container(id="body"):
             yield self.input
             yield self.list_view
 
-    @dataclass
-    class Match:
-        option: SearchOption
-        score: ScoreAlignment
+    async def on_mount(self):
+        await self.update_results("")
+
+    @staticmethod
+    def get_sorted_grouped_options(options: List[SearchOption]) -> List[OptionsGroup]:
+        groups = {}
+        for option in options:
+            group = groups.get(option.group, None)
+            if not group:
+                group = SearchModal.OptionsGroup(name=option.group,
+                                                 priority=option.group_priority,
+                                                 options=[])
+                groups[option.group] = group
+
+            group.options.append(option)
+
+        sorted_groups = list(sorted(groups.values(), key=lambda g: g.priority))
+        return sorted_groups
 
     @on(Input.Changed)
     async def on_input_changed(self, event: Input.Changed) -> None:
+        await self.update_results(event.value)
 
-        matches: List[SearchModal.Match] = []
+    async def update_results(self, text: str):
+        grouped_matches: List[List[SearchModal.Match]] = []
+        available_spots = self.MAX_RESULTS
 
-        for option in self.options:
-            score_align = fuzz.partial_ratio_alignment(event.value, option.text, processor=utils.default_process, score_cutoff=70)
-            if score_align:
-                matches.append(SearchModal.Match(option=option, score=score_align))
-
-        matches_by_type = {}
-        for m in matches:
-            matches_by_type.setdefault(m.option.type_priority, []).append(m)
+        for group in self.grouped_options:
+            matches = []
+            for option in group.options:
+                score_align = fuzz.partial_ratio_alignment(text, option.text, processor=utils.default_process, score_cutoff=70)\
+                              if text else ScoreAlignment(100, 0, 0, 0, 0)
+                if score_align:
+                    matches.append(SearchModal.Match(option=option, score=score_align.score,
+                                                     start_idx=score_align.dest_start, end_idx=score_align.dest_end))
+            if matches:
+                matches_to_add = list(sorted(matches, key=lambda m: m.score))[:available_spots]
+                grouped_matches.append(matches_to_add)
+                available_spots -= len(matches_to_add)
+            if available_spots <=0:
+                break
 
         renderable_options = []
 
-        for (_, grouped_matches) in sorted(matches_by_type.items(), key=(lambda g: g[0])):
-            for m in grouped_matches:
+        for matches in grouped_matches:
+            for m in matches:
                 primary = Text(" " + m.option.text, overflow="ellipsis")
-                primary.stylize(style="blue", start=m.score.dest_start + 1, end=m.score.dest_end + 1)
-                secondary = Text(m.option.type + " ", style="#888888", justify="right")
+                primary.stylize(style="blue", start=m.start_idx + 1, end=m.end_idx + 1)
+                secondary = Text(m.option.group + " ", style="#888888", justify="right")
                 renderable_options.append(Option(Columns([primary, secondary], expand=True), id=m.option.id))
             renderable_options.append(None)
-            
-        # for m in sorted(matches, key=(lambda x: x.score.score), reverse=True):
-        #     primary = Text(" " + m.option.text, overflow="ellipsis")
-        #     primary.stylize(style="blue", start=m.score.dest_start + 1, end=m.score.dest_end + 1)
-        #     secondary = Text(m.option.type + " ", style="#888888", justify="right")
-        #     renderable_options.append(Option(Columns([primary,secondary], expand=True), id=m.option.id))
 
         async with self.list_view.batch():
             self.list_view.clear_options()
@@ -109,7 +141,7 @@ class SearchModal(ModalScreen[SearchOption]):
             # self.input.insert_text_at_cursor(self.list_view.highlighted_option.id)
             event.prevent_default()
             event.stop()
-            self.dismiss(next((o for o in self.options if o.id == option_id)))
+            self.dismiss(next((o for o in self.all_options if o.id == option_id)))
         if event.key == "escape":
             event.prevent_default()
             event.stop()
