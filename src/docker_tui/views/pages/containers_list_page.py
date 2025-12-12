@@ -1,15 +1,19 @@
 ﻿import os
 from dataclasses import dataclass
+from typing import List
 
 from aiodocker import DockerError
 from rich.text import Text
 from textual import work, on
 from textual.app import ComposeResult
 from textual.binding import Binding
+from textual.color import Color
+from textual.theme import Theme
 from textual.widgets import DataTable
 
 from docker_tui.docker.api import list_containers, stop_container, restart_container, delete_container
-from docker_tui.services.containers_stats_monitor import ContainersStatsMonitor
+from docker_tui.docker.models import Container
+from docker_tui.services.containers_stats_monitor import ContainersStatsMonitor, ContainerStats
 from docker_tui.views.modals.action_verification_modal import ActionVerificationModal
 from docker_tui.views.pages.page import Page
 
@@ -20,6 +24,11 @@ class ContainersListPage(Page):
     class SelectedContainer:
         id: str
         name: str
+
+    @dataclass
+    class Row:
+        cells: List[Text]
+        key: str
 
     DEFAULT_CSS = """
         #containers-table {
@@ -62,6 +71,7 @@ class ContainersListPage(Page):
     def compose(self) -> ComposeResult:
         yield self.table
 
+    @work
     async def on_mount(self) -> None:
         super().on_mount()
         self.table.loading = True
@@ -168,11 +178,12 @@ class ContainersListPage(Page):
             containers = ContainersStatsMonitor.instance().get_all_containers()
             containers_stats = {s.container_id: s for s in ContainersStatsMonitor.instance().get_all_stats()}
         except Exception as ex:
+            self.table.loading = False
             self.notify(title="Docker is down", message=str(ex), severity="error")
             return
-        finally:
-            if self.table.loading:
-                self.table.loading = False
+
+        if self.table.loading:
+            self.table.loading = False
 
         self.table.clear()
 
@@ -183,37 +194,53 @@ class ContainersListPage(Page):
         for (project_name, project_containers) in projects.items():
             grouped = False
             if project_name:
+                row = self._build_project_row(name=project_name, containers=project_containers)
                 grouped = True
-                self.table.add_row(Text('P', style="bold blue"), Text(project_name),
-                                   key=self.PROJECT_ROW_KEY_PREFIX+project_name)
+                self.table.add_row(*row, key=self.PROJECT_ROW_KEY_PREFIX + project_name)
 
             for i,c in enumerate(project_containers):
-                stats = containers_stats.get(c.id)
-                name = c.name if not grouped \
-                       else ("├─ " if i < len(project_containers)-1 else '└─ ')+c.service
                 row_key = f"{c.id};{c.name}"
-                if c.state == 'exited':
-                    self.table.add_row(
-                        Text('○', style="#888888"),
-                        Text(name, style="#888888"),
-                        Text(c.id[:12], style="#888888"),
-                        Text(c.image, style="#888888"),
-                        Text("", style="#888888"),
-                        Text("", style="#888888"),
-                        Text(c.status, style="#888888"),
-                        key=row_key)
-                else:
-                    self.table.add_row(
-                        Text('●', style="green"),
-                        Text(name),
-                        Text(c.id[:12]),
-                        Text(c.image),
-                        Text(f"{stats.cpu_usage[-1].value:.2f}%" if stats else ""),
-                        Text(f"{stats.memory_usage[-1].value:.2f} MB" if stats else ""),
-                        Text(c.status),
-                        key=row_key)
+                stats = containers_stats.get(c.id)
+                row = self._build_container_row(c=c, s=stats, is_grouped=grouped,
+                                                is_last_in_group=(i == len(project_containers)-1))
+                self.table.add_row(*row, key=row_key)
 
                 if row_key == ContainersListPage.last_selected_row_key:
                     self.table.move_cursor(row=len(self.table.rows))
 
         self.table.focus()
+
+    @property
+    def _normal_text_color(self):
+        return Color.parse(self.app.theme_variables["foreground"]).hex
+
+    @property
+    def _muted_text_color(self):
+        return "#888888"
+
+    def _build_project_row(self,name: str, containers: List[Container]) -> List[Text]:
+        any_active = any((c.state == "running" for c in containers))
+        icon_color = "blue" if any_active else self._muted_text_color
+        text_style = "" if any_active else self._muted_text_color
+        return [
+            Text('P', style=f"bold {icon_color}"),
+            Text(name, style=text_style)
+        ]
+
+    def _build_container_row(self, c: Container, s: ContainerStats | None, is_grouped: bool, is_last_in_group: bool) -> List[Text]:
+        is_active = c.state == "running"
+        icon_style = "green" if is_active else self._muted_text_color
+        text_style = "" if is_active else self._muted_text_color
+        icon = '●' if is_active else '○'
+        name = c.name if not is_grouped else ("└─ " if is_last_in_group else "├─ ") +c.service
+        cpu = f"{s.cpu_usage[-1].value:.2f}%" if s else ""
+        memory = f"{s.memory_usage[-1].value:.2f} MB" if s else ""
+        return [
+            Text(icon, style=icon_style),
+            Text(name, style=text_style),
+            Text(c.id[:12], style=text_style),
+            Text(c.image, style=text_style),
+            Text(cpu, style=text_style),
+            Text(memory, style=text_style),
+            Text(c.status, style=text_style)
+        ]
