@@ -9,3 +9,4 @@ and based on [Textual](https://github.com/Textualize/textual).
 ## Features
 - Container views: list, logs, details, and stats
 - Container actions: exec, stop, restart, delete
+- Quick search-and-navigate to anywhere in the app.

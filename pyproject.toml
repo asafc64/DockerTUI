@@ -1,6 +1,8 @@
+
+
 [project]
 name = "docker-tui"
-version = "0.1.0"
+dynamic = ["version"]
 description = "A console user interface for docker"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -23,5 +25,11 @@ Issues = "https://github.com/asafc64/DockerTUI/issues"
 dtui = "docker_tui.cli:main"
 
 [build-system]
-requires = ["setuptools>=64", "wheel"]
+requires = ["setuptools>=64", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
+
+
+[tool.setuptools_scm]
+version_scheme = "release-branch-semver"
+local_scheme = "no-local-version"
+
