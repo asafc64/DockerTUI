@@ -21,6 +21,9 @@ class AsyncBackgroundLoop(AsyncBackground):
         except asyncio.CancelledError:
             logger.info("Loop cancelled.")
             raise
+        except Exception as ex:
+            print(ex)
+            exit(1)
 
     @abstractmethod
     async def _run_in_loop(self):

@@ -29,6 +29,7 @@ class ContainersStatsMonitor(AsyncBackgroundLoop):
         super().__init__()
         self._containers: List[Container] = []
         self._listeners: Dict[str, ContainerStatsListener] = {}
+        self._last_exception: Exception | None = None
 
     @classmethod
     def instance(cls) -> 'ContainersStatsMonitor':
@@ -37,37 +38,54 @@ class ContainersStatsMonitor(AsyncBackgroundLoop):
         return cls._instance
 
     def get_all_containers(self) -> List[Container]:
+        if self._last_exception:
+            raise self._last_exception
+
         return self._containers
 
     def get_all_stats(self) -> List[ContainerStats]:
+        if self._last_exception:
+            raise self._last_exception
+
         return [l.get_stats() for l in self._listeners.values()]
 
     def get_stats(self, container_id: str) -> ContainerStats | None:
+        if self._last_exception:
+            raise self._last_exception
+
         listener = self._listeners.get(container_id, None)
         if not listener:
             return None
 
         return listener.get_stats()
 
+    async def force_fetch(self):
+        await self._run_in_loop()
+
     async def _run_in_loop(self):
-        # Clear dead listeners
-        for (id ,listener) in self._listeners.items():
-            if not listener.is_running():
-                self._listeners.pop(id)
+        self._last_exception = None
+        try:
+            # Clear dead listeners
+            for (id ,listener) in self._listeners.items():
+                if not listener.is_running():
+                    self._listeners.pop(id)
 
-        # Create new listeners if needed
-        self._containers = await list_containers()
-        for c in self._containers:
-            if c.state == "running" and c.id not in self._listeners:
-                new_listener = ContainerStatsListener(container_id=c.id)
-                new_listener.start()
-                self._listeners[c.id] = new_listener
+            # Create new listeners if needed
+            self._containers = await list_containers()
+            for c in self._containers:
+                if c.state == "running" and c.id not in self._listeners:
+                    new_listener = ContainerStatsListener(container_id=c.id)
+                    new_listener.start()
+                    self._listeners[c.id] = new_listener
 
-        # Delete existing listeners  if needed
-        for c in self._containers:
-            if c.state != "running" and c.id in self._listeners:
-                old_listener = self._listeners.pop(c.id)
-                await old_listener.close()
+            # Delete existing listeners  if needed
+            for c in self._containers:
+                if c.state != "running" and c.id in self._listeners:
+                    old_listener = self._listeners.pop(c.id)
+                    await old_listener.close()
+
+        except Exception as ex:
+            self._last_exception = ex
 
 
 class ContainerStatsListener(AsyncBackground):

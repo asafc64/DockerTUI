@@ -62,8 +62,10 @@ class ContainersListPage(Page):
     def compose(self) -> ComposeResult:
         yield self.table
 
-    def on_mount(self) -> None:
+    async def on_mount(self) -> None:
         super().on_mount()
+        self.table.loading = True
+        await ContainersStatsMonitor.instance().force_fetch()
         self.refresh_table_data()
         self.set_interval(5, self.refresh_table_data)
 
@@ -161,10 +163,16 @@ class ContainersListPage(Page):
             ContainersListPage.last_selected_row_key = event.row_key.value
 
 
-    @work
-    async def refresh_table_data(self) -> None:
-        containers = await list_containers()
-        containers_stats = {s.container_id:s for s in ContainersStatsMonitor.instance().get_all_stats()}
+    def refresh_table_data(self) -> None:
+        try:
+            containers = ContainersStatsMonitor.instance().get_all_containers()
+            containers_stats = {s.container_id: s for s in ContainersStatsMonitor.instance().get_all_stats()}
+        except Exception as ex:
+            self.notify(title="Docker is down", message=str(ex), severity="error")
+            return
+        finally:
+            if self.table.loading:
+                self.table.loading = False
 
         self.table.clear()
 

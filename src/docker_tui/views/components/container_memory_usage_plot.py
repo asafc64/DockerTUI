@@ -12,7 +12,10 @@ class ContainerMemoryUsagePlot(TimeSeriesPlot):
         self.container_id = container_id
 
     def get_data(self) -> (List[float], List[datetime]):
-        stats = ContainersStatsMonitor.instance().get_stats(container_id=self.container_id)
+        try:
+            stats = ContainersStatsMonitor.instance().get_stats(container_id=self.container_id)
+        except:
+            stats = None
         if not stats:
             self.border_title = f"Memory Usage - <No Data>%"
             return [], []

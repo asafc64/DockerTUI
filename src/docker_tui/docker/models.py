@@ -22,7 +22,7 @@ class ContainerDetails:
         self.args: List[str] = data["Args"]
         self.env: List[str] = data["Config"]["Env"]
         self.image: str = data["Config"]["Image"]
-        self.volumes: List[str] = list(data["Config"]["Volumes"].keys())
+        self.volumes: List[str] = list((data["Config"].get("Volumes", None) or {}).keys())
 
         if data["State"]["Running"]:
             self.status: str = "Running"

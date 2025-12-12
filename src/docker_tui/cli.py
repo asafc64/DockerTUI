@@ -72,7 +72,10 @@ class DockerTuiApp(App):
         ]
 
         # Containers
-        containers = ContainersStatsMonitor.instance().get_all_containers()
+        try:
+            containers = ContainersStatsMonitor.instance().get_all_containers()
+        except:
+            containers = []
         for c in containers:
             options.append(SearchOption(c.name, "Container > Info", 2, f"goto_container_info_{c.id}", [c.id, c.name]))
             options.append(SearchOption(c.name, "Container > Logs", 3, f"goto_container_logs_{c.id}", [c.id, c.name]))
