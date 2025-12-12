@@ -30,8 +30,10 @@ class ActionVerificationModal(ModalScreen[bool]):
             content-align: center middle;
         }
 
-        Button {
-            width: 100%;
+        #yes, #no {
+            content-align: center middle;
+            width: 1fr;
+            margin: 0 3;
         }
     """
 
