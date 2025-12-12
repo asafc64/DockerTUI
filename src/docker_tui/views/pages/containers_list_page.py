@@ -1,4 +1,5 @@
 ﻿import os
+import time
 from dataclasses import dataclass
 from typing import List
 
@@ -14,6 +15,7 @@ from textual.widgets import DataTable
 from docker_tui.docker.api import list_containers, stop_container, restart_container, delete_container
 from docker_tui.docker.models import Container
 from docker_tui.services.containers_stats_monitor import ContainersStatsMonitor, ContainerStats
+from docker_tui.utils.input_helpers import MouseInputHelper
 from docker_tui.views.modals.action_verification_modal import ActionVerificationModal
 from docker_tui.views.pages.page import Page
 
@@ -161,6 +163,10 @@ class ContainersListPage(Page):
     def handle_row_selected(self, event: DataTable.RowSelected) -> None:
         if not self.selected_container:
             return
+
+        if not MouseInputHelper.is_double_click():
+            return
+
         from docker_tui.views.pages.container_details_page import ContainerDetailsPage
         self.nav_to(page=ContainerDetailsPage(container_name=self.selected_container.name,
                                               container_id=self.selected_container.id))
