@@ -5,7 +5,7 @@ from typing import List
 
 from aiodocker import DockerError
 from rich.text import Text
-from textual import work, on
+from textual import work, on, messages
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.color import Color
@@ -63,12 +63,13 @@ class ContainersListPage(Page):
     PROJECT_ROW_KEY_PREFIX = "#project#row#"
 
     is_root_page = True
-    last_selected_row_key = None
+    last_selected_container_id = None
 
-    def __init__(self):
+    def __init__(self, select_container_id: str = None):
         super().__init__("Containers")
         self.table = DataTable(cursor_type='row', id="containers-table")
         self.table.add_columns("", "Name", "Id", "Image", "CPU", "Memory", "Status")
+        self.default_selected_container_id = select_container_id or self.last_selected_container_id
 
     def compose(self) -> ComposeResult:
         yield self.table
@@ -81,10 +82,18 @@ class ContainersListPage(Page):
         self.refresh_table_data()
         self.set_interval(5, self.refresh_table_data)
 
+    def on_prune(self, event: messages.Prune) -> None:
+        if self.selected_container:
+            ContainersListPage.last_selected_container_id = self.selected_container.id
+
     @property
     def selected_container(self) -> SelectedContainer | None:
-        if self.last_selected_row_key:
-            id, name = self.last_selected_row_key.split(";", 2)
+        if not self.table.rows:
+            return None
+
+        selected_key = list(self.table.rows)[self.table.cursor_row].value
+        if not selected_key.startswith(self.PROJECT_ROW_KEY_PREFIX):
+            id, name = selected_key.split(";", 2)
             return ContainersListPage.SelectedContainer(id=id, name=name)
 
         return None
@@ -171,13 +180,12 @@ class ContainersListPage(Page):
         self.nav_to(page=ContainerDetailsPage(container_name=self.selected_container.name,
                                               container_id=self.selected_container.id))
 
-    @on(DataTable.RowHighlighted)
-    def handle_row_highlighted(self, event: DataTable.RowHighlighted) -> None:
-        if event.row_key.value.startswith(self.PROJECT_ROW_KEY_PREFIX):
-            ContainersListPage.last_selected_row_key = None
-        else:
-            ContainersListPage.last_selected_row_key = event.row_key.value
-
+    # @on(DataTable.RowHighlighted)
+    # def handle_row_highlighted(self, event: DataTable.RowHighlighted) -> None:
+    #     if event.row_key.value.startswith(self.PROJECT_ROW_KEY_PREFIX):
+    #         ContainersListPage.last_selected_container_id = None
+    #     else:
+    #         ContainersListPage.last_selected_container_id = event.row_key.value
 
     def refresh_table_data(self) -> None:
         try:
@@ -190,6 +198,15 @@ class ContainersListPage(Page):
 
         if self.table.loading:
             self.table.loading = False
+
+        # The row to select is either the default one or the current one
+        # [!] Note that we can use the default only once
+        container_id_to_select = \
+            self.default_selected_container_id or \
+            (self.selected_container.id if self.selected_container else None)
+        self.default_selected_container_id = None
+
+        scroll_to_do = self.table.scroll_offset
 
         self.table.clear()
 
@@ -211,9 +228,10 @@ class ContainersListPage(Page):
                                                 is_last_in_group=(i == len(project_containers)-1))
                 self.table.add_row(*row, key=row_key)
 
-                if row_key == ContainersListPage.last_selected_row_key:
+                if c.id == container_id_to_select:
                     self.table.move_cursor(row=len(self.table.rows))
 
+        self.table.scroll_to(x=scroll_to_do.x, y=scroll_to_do.y, immediate=True)
         self.table.focus()
 
     @property

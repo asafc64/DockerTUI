@@ -77,8 +77,9 @@ class DockerTuiApp(App):
         except:
             containers = []
         for c in containers:
-            options.append(SearchOption(c.name, "Container > Info", 2, f"goto_container_info_{c.id}", [c.id, c.name]))
-            options.append(SearchOption(c.name, "Container > Logs", 3, f"goto_container_logs_{c.id}", [c.id, c.name]))
+            options.append(SearchOption(c.name, "Container > List", 2, f"goto_container_row_{c.id}", [c.id]))
+            options.append(SearchOption(c.name, "Container > Info", 3, f"goto_container_info_{c.id}", [c.id, c.name]))
+            options.append(SearchOption(c.name, "Container > Logs", 4, f"goto_container_logs_{c.id}", [c.id, c.name]))
 
         selected = await self.push_screen_wait(SearchModal(options=options))
         if not selected:
@@ -86,6 +87,10 @@ class DockerTuiApp(App):
 
         if selected.id == "goto_containers_list":
             self.show_page(ContainersListPage())
+
+        if selected.id.startswith("goto_container_row"):
+            container_id = selected.args[0]
+            self.show_page(ContainersListPage(select_container_id=container_id))
 
         if selected.id.startswith("goto_container_info"):
             container_id = selected.args[0]
