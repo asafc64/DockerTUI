@@ -9,6 +9,7 @@ class Container:
         self.id = data["Id"]
         self.name = data["Names"][0].lstrip('/')
         self.image = data["Image"]
+        self.image_id = data["ImageID"]
         self.state = data["State"]
         self.status = data["Status"]
         self.created_at = datetime.fromtimestamp(data["Created"])
@@ -38,3 +39,14 @@ class ContainerDetails:
             local_port = local.split("/")[0]
             host_port = host[0]["HostPort"]
             self.ports.append((local_port, host_port))
+
+class ImageListItem:
+    def __init__(self, data: Dict[str, Any]):
+        self.name, self.tag = data["RepoTags"][0].split(":", maxsplit=1)
+        self.id = data["Id"]
+        self.size = data["Size"] / (1024 * 1024) # MB
+        self.created_at = datetime.fromtimestamp(data["Created"])
+
+    @property
+    def short_id(self) -> str:
+        return self.id.split(":")[1][:12]

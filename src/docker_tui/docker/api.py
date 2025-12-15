@@ -1,8 +1,8 @@
-﻿from typing import List
+﻿from typing import List, Any
 
 import aiodocker
 
-from docker_tui.docker.models import Container, ContainerDetails
+from docker_tui.docker.models import Container, ContainerDetails, ImageListItem
 
 
 async def list_containers() -> List[Container]:
@@ -36,3 +36,12 @@ async def delete_container(id: str):
     async with aiodocker.Docker() as docker:
         container = await docker.containers.get(container_id=id)
         await container.delete()
+
+async def list_images() -> List[ImageListItem]:
+    async with aiodocker.Docker() as docker:
+        images = await docker.images.list()
+        return [ImageListItem(i) for i in images]
+
+async def delete_image(id: str):
+    async with aiodocker.Docker() as docker:
+        await docker.images.delete(name=id) # id is also ok

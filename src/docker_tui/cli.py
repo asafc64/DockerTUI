@@ -4,10 +4,12 @@ from textual.binding import Binding
 from textual.containers import Container
 
 from docker_tui.services.containers_stats_monitor import ContainersStatsMonitor
+from docker_tui.services.images_provider import ImagesProvider
 from docker_tui.views.modals.search_modal import SearchModal, SearchOption
 from docker_tui.views.pages.container_details_page import ContainerDetailsPage
 from docker_tui.views.pages.container_log_page import ContainerLogPage
 from docker_tui.views.pages.containers_list_page import ContainersListPage
+from docker_tui.views.pages.image_list_page import ImageListPage
 from docker_tui.views.pages.page import Page
 from docker_tui.views.shortcuts import Shortcuts
 
@@ -44,11 +46,14 @@ class DockerTuiApp(App):
         self.current_page: Page = None
 
     async def on_mount(self):
-        self.show_page(page=ContainersListPage())
+        # self.show_page(page=ContainersListPage())
+        self.show_page(page=ImageListPage())
         ContainersStatsMonitor.instance().start()
+        ImagesProvider.instance().start()
 
     async def on_shutdown(self):
         await ContainersStatsMonitor.instance().close()
+        await ImagesProvider.instance().close()
 
     def compose(self) -> ComposeResult:
         yield Shortcuts()
@@ -69,6 +74,7 @@ class DockerTuiApp(App):
         # Pages
         options = [
             SearchOption("Containers", "Page", 1, "goto_containers_list"),
+            SearchOption("Images", "Page", 1, "goto_images_list"),
         ]
 
         # Containers
@@ -81,12 +87,23 @@ class DockerTuiApp(App):
             options.append(SearchOption(c.name, "Container > Info", 3, f"goto_container_info_{c.id}", [c.id, c.name]))
             options.append(SearchOption(c.name, "Container > Logs", 4, f"goto_container_logs_{c.id}", [c.id, c.name]))
 
+        # Images
+        try:
+            images = ImagesProvider.instance().get_images()
+        except:
+            images = []
+        for i in images:
+            options.append(SearchOption(i.name, "Image > List", 5, f"goto_image_row_{i.id}", [i.id]))
+
         selected = await self.push_screen_wait(SearchModal(options=options))
         if not selected:
             return
 
         if selected.id == "goto_containers_list":
             self.show_page(ContainersListPage())
+
+        if selected.id == "goto_images_list":
+            self.show_page(ImageListPage())
 
         if selected.id.startswith("goto_container_row"):
             container_id = selected.args[0]

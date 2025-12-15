@@ -45,9 +45,6 @@ class ContainersListPage(Page):
             .datatable--hover, .datatable--cursor{
                 text-style: none;
             }
-            #containers-table .column--name {
-                width: 100;
-            }
         }
     """
 

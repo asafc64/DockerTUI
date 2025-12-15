@@ -49,6 +49,7 @@ class SearchModal(ModalScreen[SearchOption]):
         #search-results {
             border: none;
             padding: 0;
+            padding-top: 1;
         }
         #body {
             margin: 3;
