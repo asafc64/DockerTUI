@@ -3,7 +3,7 @@ from rich.table import Table
 from rich.text import Text
 from textual import on
 from textual.app import ComposeResult
-from textual.containers import Container
+from textual.containers import Container, Vertical, Horizontal
 from textual.events import Key
 from textual.screen import ModalScreen
 from textual.widgets import OptionList, Input, ListView, Label, ListItem
@@ -29,13 +29,13 @@ class DockerhubSearchModal(ModalScreen[str]):
             .search-result{
                 width: 1fr;
                 height: 2;
-                margin: 0 1 0 0;
+                margin: 0 1;
                 layout: grid;
-                grid-size: 3;
-                grid-columns: auto 1fr auto;
+                grid-size: 2;
+                grid-columns: 1fr auto;
                 grid-gutter: 0 1;
             }
-            .image-icon{
+            .image-v-icon{
                 color: $primary
             }
             .image-name{
@@ -82,14 +82,16 @@ class DockerhubSearchModal(ModalScreen[str]):
             await self.list_view.clear()
             for image in images:
 
+                name = Label(image.name, classes="image-name")
+                if image.is_official:
+                    name = Horizontal(name, Label(" ✔", classes="image-v-icon"))
+
                 icon = Label("✔" if image.is_official else " ", classes="image-icon")
                 icon.tooltip = "Official image" if image.is_official else "Unofficial image"
 
                 row = Container(
-                    icon,
-                    Label(image.name, classes="image-name"),
+                    name,
                     Label(f"{image.stars}★"),
-                    Label(f" "),
                     Label(image.description, classes="image-description"),
                     classes="search-result")
 
