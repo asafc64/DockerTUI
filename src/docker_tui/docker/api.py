@@ -2,7 +2,12 @@
 
 import aiodocker
 
-from docker_tui.docker.models import Container, ContainerDetails, ImageListItem
+from docker_tui.docker.models import Container, ContainerDetails, ImageListItem, DockerHubImage
+
+import aiohttp
+from typing import Any, Dict
+
+DOCKER_HUB_SEARCH_URL = "https://hub.docker.com/v2/search/repositories/"
 
 
 async def list_containers() -> List[Container]:
@@ -45,3 +50,19 @@ async def list_images() -> List[ImageListItem]:
 async def delete_image(id: str):
     async with aiodocker.Docker() as docker:
         await docker.images.delete(name=id) # id is also ok
+
+async def search_dockerhub(query: str) -> List[DockerHubImage]:
+
+    params = {
+        "query": query,
+        "page": 1,
+        "page_size": 100,
+    }
+
+    async with aiohttp.ClientSession() as client:
+        async with client.get(DOCKER_HUB_SEARCH_URL, params=params) as resp:
+            resp.raise_for_status()
+            response = await resp.json()
+            return [DockerHubImage(r) for r in response["results"]]
+
+

@@ -8,10 +8,11 @@ from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.widgets import DataTable
 
-from docker_tui.docker.api import list_images, delete_image
+from docker_tui.docker.api import list_images, delete_image, search_dockerhub
 from docker_tui.services.containers_stats_monitor import ContainersStatsMonitor
 from docker_tui.services.images_provider import ImagesProvider
 from docker_tui.views.modals.action_verification_modal import ActionVerificationModal
+from docker_tui.views.modals.dockerhub_search_modal import DockerhubSearchModal
 from docker_tui.views.pages.page import Page
 
 
@@ -39,6 +40,7 @@ class ImageListPage(Page):
         """
 
     BINDINGS = [
+        Binding("p", "pull", "Pull", group=Binding.Group("Actions")),
         Binding("delete", "delete", "Delete", group=Binding.Group("Actions")),
     ]
 
@@ -61,6 +63,12 @@ class ImageListPage(Page):
         await ImagesProvider.instance().force_fetch()
         self.refresh_table_data()
         self.set_interval(5, self.refresh_table_data)
+
+    @work
+    async def action_pull(self):
+        selected = await self.app.push_screen_wait(DockerhubSearchModal())
+        if not selected:
+            return
 
     @work
     async def action_delete(self):

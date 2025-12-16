@@ -4,6 +4,9 @@ from typing import List, Any
 from rapidfuzz import fuzz, utils
 from rapidfuzz.distance import ScoreAlignment
 from rich.columns import Columns
+from rich.console import Group
+from rich.layout import Layout
+from rich.table import Table
 from rich.text import Text
 from textual import on, events
 from textual.app import ComposeResult
@@ -120,10 +123,27 @@ class SearchModal(ModalScreen[SearchOption]):
 
         for matches in grouped_matches:
             for m in matches:
+
                 primary = Text(" " + m.option.text, overflow="ellipsis")
                 primary.stylize(style="blue", start=m.start_idx + 1, end=m.end_idx + 1)
                 secondary = Text(m.option.group + " ", style="#888888", justify="right")
-                renderable_options.append(Option(Columns([primary, secondary], expand=True), id=m.option.id))
+
+                panel_group = Group(
+                    Columns([primary, Text("A")]),
+                    Columns([secondary, Text("B")])
+                )
+
+                t = Table.grid(expand=True)
+                t.add_row(primary, Text("A"))
+                t.add_row(secondary, Text("B"))
+
+                l = Layout(minimum_size=2)
+                l.split_row(
+                    Layout(primary, name="l", ratio=2),
+                    Layout(secondary, name="r"),
+                )
+
+                renderable_options.append(Option(t, id=m.option.id))
             renderable_options.append(None)
 
         async with self.list_view.batch():

@@ -50,3 +50,12 @@ class ImageListItem:
     @property
     def short_id(self) -> str:
         return self.id.split(":")[1][:12]
+
+
+class DockerHubImage:
+    def __init__(self, data: Dict[str, Any]):
+        self.name = data["repo_name"]
+        self.description = data["short_description"]
+        self.is_official = data["is_official"]
+        self.stars = data["star_count"]
+        self.downloads = data["pull_count"]
