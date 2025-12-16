@@ -1,7 +1,9 @@
-﻿from rich.padding import PaddingDimensions
+﻿from typing import List
+
+from rich.padding import PaddingDimensions
 from rich.table import Table
 from rich.text import Text
-from textual import on
+from textual import on, work
 from textual.app import ComposeResult
 from textual.containers import Container, Vertical, Horizontal
 from textual.events import Key
@@ -9,6 +11,7 @@ from textual.screen import ModalScreen
 from textual.widgets import OptionList, Input, ListView, Label, ListItem
 
 from docker_tui.docker.api import search_dockerhub
+from docker_tui.docker.models import DockerHubImage
 from docker_tui.views.components.debounced_input_handler import DebouncedInputHandler
 
 
@@ -65,6 +68,7 @@ class DockerhubSearchModal(ModalScreen[str]):
         self.list_view = ListView(id="search-results")
         self.list_view.can_focus = False
         self.search_handler = None
+        self.images: List[DockerHubImage] = []
 
 
     def compose(self) -> ComposeResult:
@@ -75,12 +79,13 @@ class DockerhubSearchModal(ModalScreen[str]):
     async def on_mount(self):
         self.search_handler = DebouncedInputHandler(input_widget=self.input, callback=self.search)
 
+    @work(group="image-search", exclusive=True)
     async def search(self, text: str) -> None:
         self.list_view.loading = True
-        images = await search_dockerhub(query=text)
+        self.images = await search_dockerhub(query=text)
         async with self.list_view.batch():
             await self.list_view.clear()
-            for image in images:
+            for image in self.images:
 
                 name = Label(image.name, classes="image-name")
                 if image.is_official:
@@ -100,15 +105,14 @@ class DockerhubSearchModal(ModalScreen[str]):
             self.list_view.loading = False
 
     def on_key(self, event: Key) -> None:
-        if event.key == "down":
+        if event.key == "down" and self.list_view.index is not None:
             self.list_view.index += 1
-        if event.key == "up":
+        if event.key == "up" and self.list_view.index is not None:
             self.list_view.index -= 1
-        if event.key == "enter" and self.list_view.highlighted_option:
-            option_id = self.list_view.highlighted_option.id
+        if event.key == "enter" and self.list_view.index is not None:
             event.prevent_default()
             event.stop()
-            self.dismiss(option_id)
+            self.dismiss(self.images[self.list_view.index].name)
         if event.key == "escape":
             event.prevent_default()
             event.stop()
