@@ -1,5 +1,4 @@
 ﻿import os
-import time
 from dataclasses import dataclass
 from typing import List
 
@@ -9,11 +8,10 @@ from textual import work, on, messages
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.color import Color
-from textual.theme import Theme
 from textual.widgets import DataTable
 
-from docker_tui.docker.api import list_containers, stop_container, restart_container, delete_container
-from docker_tui.docker.models import Container
+from docker_tui.apis.docker_api import stop_container, restart_container, delete_container
+from docker_tui.apis.models import Container
 from docker_tui.services.containers_stats_monitor import ContainersStatsMonitor, ContainerStats
 from docker_tui.utils.input_helpers import MouseInputHelper
 from docker_tui.views.modals.action_verification_modal import ActionVerificationModal
@@ -21,7 +19,6 @@ from docker_tui.views.pages.page import Page
 
 
 class ContainersListPage(Page):
-
     @dataclass
     class SelectedContainer:
         id: str
@@ -113,7 +110,7 @@ class ContainersListPage(Page):
         if not self.selected_container:
             return
         with self.app.suspend():
-            os.system(f"docker exec -it {self.selected_container.id} sh")
+            os.system(f"apis exec -it {self.selected_container.id} sh")
 
     @work
     async def action_stop(self):
@@ -218,11 +215,11 @@ class ContainersListPage(Page):
                 grouped = True
                 self.table.add_row(*row, key=self.PROJECT_ROW_KEY_PREFIX + project_name)
 
-            for i,c in enumerate(project_containers):
+            for i, c in enumerate(project_containers):
                 row_key = f"{c.id};{c.name}"
                 stats = containers_stats.get(c.id)
                 row = self._build_container_row(c=c, s=stats, is_grouped=grouped,
-                                                is_last_in_group=(i == len(project_containers)-1))
+                                                is_last_in_group=(i == len(project_containers) - 1))
                 self.table.add_row(*row, key=row_key)
 
                 if c.id == container_id_to_select:
@@ -239,7 +236,7 @@ class ContainersListPage(Page):
     def _muted_text_color(self):
         return "#888888"
 
-    def _build_project_row(self,name: str, containers: List[Container]) -> List[Text]:
+    def _build_project_row(self, name: str, containers: List[Container]) -> List[Text]:
         any_active = any((c.state == "running" for c in containers))
         icon_color = "blue" if any_active else self._muted_text_color
         text_style = "" if any_active else self._muted_text_color
@@ -248,12 +245,13 @@ class ContainersListPage(Page):
             Text(name, style=text_style)
         ]
 
-    def _build_container_row(self, c: Container, s: ContainerStats | None, is_grouped: bool, is_last_in_group: bool) -> List[Text]:
+    def _build_container_row(self, c: Container, s: ContainerStats | None, is_grouped: bool, is_last_in_group: bool) -> \
+    List[Text]:
         is_active = c.state == "running"
         icon_style = "green" if is_active else self._muted_text_color
         text_style = "" if is_active else self._muted_text_color
         icon = '●' if is_active else '○'
-        name = c.name if not is_grouped else ("└─ " if is_last_in_group else "├─ ") +c.service
+        name = c.name if not is_grouped else ("└─ " if is_last_in_group else "├─ ") + c.service
         cpu = f"{s.cpu_usage[-1].value:.2f}%" if s else ""
         memory = f"{s.memory_usage[-1].value:.2f} MB" if s else ""
         return [

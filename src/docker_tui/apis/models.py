@@ -13,8 +13,9 @@ class Container:
         self.state = data["State"]
         self.status = data["Status"]
         self.created_at = datetime.fromtimestamp(data["Created"])
-        self.project = data["Labels"].get("com.docker.compose.project")
-        self.service = data["Labels"].get("com.docker.compose.service")
+        self.project = data["Labels"].get("com.apis.compose.project")
+        self.service = data["Labels"].get("com.apis.compose.service")
+
 
 class ContainerDetails:
     def __init__(self, data: DockerContainer):
@@ -40,11 +41,12 @@ class ContainerDetails:
             host_port = host[0]["HostPort"]
             self.ports.append((local_port, host_port))
 
+
 class ImageListItem:
     def __init__(self, data: Dict[str, Any]):
         self.name, self.tag = data["RepoTags"][0].split(":", maxsplit=1)
         self.id = data["Id"]
-        self.size = data["Size"] / (1024 * 1024) # MB
+        self.size = data["Size"] / (1024 * 1024)  # MB
         self.created_at = datetime.fromtimestamp(data["Created"])
 
     @property
@@ -52,7 +54,7 @@ class ImageListItem:
         return self.id.split(":")[1][:12]
 
 
-class DockerHubImage:
+class DockerHubRepo:
     def __init__(self, data: Dict[str, Any]):
         self.display_name = data["repo_name"]
         if "/" in self.display_name:

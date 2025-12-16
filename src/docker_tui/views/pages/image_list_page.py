@@ -8,7 +8,7 @@ from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.widgets import DataTable
 
-from docker_tui.docker.api import list_images, delete_image, search_dockerhub
+from docker_tui.apis.docker_api import delete_image
 from docker_tui.services.containers_stats_monitor import ContainersStatsMonitor
 from docker_tui.services.images_provider import ImagesProvider
 from docker_tui.views.modals.action_verification_modal import ActionVerificationModal
@@ -17,7 +17,6 @@ from docker_tui.views.pages.page import Page
 
 
 class ImageListPage(Page):
-
     @dataclass
     class SelectedImage:
         id: str
@@ -112,7 +111,7 @@ class ImageListPage(Page):
         # The row to select is either the default one or the current one
         # [!] Note that we can use the default only once
         image_id_to_select = self.default_selected_image_id or \
-            (self.selected_image.id if self.selected_image else None)
+                             (self.selected_image.id if self.selected_image else None)
         self.default_selected_image_id = None
 
         if self.table.loading:

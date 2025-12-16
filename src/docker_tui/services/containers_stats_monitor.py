@@ -5,15 +5,17 @@ from typing import List, Dict
 
 import aiodocker
 
-from docker_tui.docker.api import list_containers
-from docker_tui.docker.models import Container
+from docker_tui.apis.docker_api import list_containers
+from docker_tui.apis.models import Container
 from docker_tui.utils.async_background import AsyncBackground
 from docker_tui.utils.async_background_loop import AsyncBackgroundLoop
+
 
 @dataclass
 class DataPoint:
     timestamp: datetime
     value: float
+
 
 @dataclass
 class ContainerStats:
@@ -66,7 +68,7 @@ class ContainersStatsMonitor(AsyncBackgroundLoop):
         self._last_exception = None
         try:
             # Clear dead listeners
-            for (id ,listener) in self._listeners.items():
+            for (id, listener) in self._listeners.items():
                 if not listener.is_running():
                     self._listeners.pop(id)
 
@@ -89,7 +91,6 @@ class ContainersStatsMonitor(AsyncBackgroundLoop):
 
 
 class ContainerStatsListener(AsyncBackground):
-
 
     def __init__(self, container_id):
         super().__init__()

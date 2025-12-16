@@ -1,12 +1,11 @@
 ﻿from typing import List
 
-from docker_tui.docker.api import list_images
-from docker_tui.docker.models import ImageListItem
+from docker_tui.apis.docker_api import list_images
+from docker_tui.apis.models import ImageListItem
 from docker_tui.utils.async_background_loop import AsyncBackgroundLoop
 
 
 class ImagesProvider(AsyncBackgroundLoop):
-
     _instance = None
 
     def __init__(self):

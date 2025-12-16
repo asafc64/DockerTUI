@@ -2,7 +2,7 @@
 from textual.app import ComposeResult
 from textual.widgets import Log
 
-from docker_tui.docker.api import get_container_logs
+from docker_tui.apis.docker_api import get_container_logs
 from docker_tui.views.pages.page import Page
 
 

@@ -6,12 +6,12 @@ from textual.events import Key
 from textual.screen import ModalScreen
 from textual.widgets import Input, ListView, Label, ListItem
 
-from docker_tui.docker.api import search_dockerhub
-from docker_tui.docker.models import DockerHubImage
+from docker_tui.apis.dockerhub_api import search_repo
+from docker_tui.apis.models import DockerHubRepo
 from docker_tui.views.components.debounced_input_handler import DebouncedInputHandler
 
 
-class DockerhubSearchModal(ModalScreen[DockerHubImage]):
+class DockerhubSearchModal(ModalScreen[DockerHubRepo]):
     DEFAULT_CSS = """
         DockerhubSearchModal {
             align: center top;
@@ -65,7 +65,7 @@ class DockerhubSearchModal(ModalScreen[DockerHubImage]):
         self.list_view = ListView(id="search-results")
         self.list_view.can_focus = False
         self.search_handler = None
-        self.images: List[DockerHubImage] = []
+        self.images: List[DockerHubRepo] = []
 
     def compose(self) -> ComposeResult:
         with Container(id="body"):
@@ -77,7 +77,7 @@ class DockerhubSearchModal(ModalScreen[DockerHubImage]):
 
     async def search(self, text: str) -> None:
         self.list_view.loading = True
-        self.images = await search_dockerhub(query=text)
+        self.images = await search_repo(query=text)
 
         await self.list_view.clear()
         for image in self.images:
