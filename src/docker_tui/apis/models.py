@@ -66,3 +66,19 @@ class DockerHubRepo:
         self.is_official = data["is_official"]
         self.stars = data["star_count"]
         self.downloads = data["pull_count"]
+
+
+class DockerHubTag:
+    class Image:
+        def __init__(self, data: Dict[str, Any]):
+            self.architecture = data["architecture"]
+            self.digest = data["digest"]
+            self.os = data["os"]
+            self.size = data["size"]  # Bytes
+
+    def __init__(self, data: Dict[str, Any]):
+        self.images = [DockerHubTag.Image(i) for i in data["images"]]
+        self.name = data["name"]
+        self.full_size = data["full_size"]
+        self.digest = data.get("digest", None)
+        self.last_updated = datetime.fromisoformat(data["last_updated"].replace("Z", "+00:00"))
