@@ -54,7 +54,12 @@ class ImageListItem:
 
 class DockerHubImage:
     def __init__(self, data: Dict[str, Any]):
-        self.name = data["repo_name"]
+        self.display_name = data["repo_name"]
+        if "/" in self.display_name:
+            self.namespace, self.repo_name = self.display_name.split("/", maxsplit=1)
+        else:
+            self.namespace = "library"
+            self.repo_name = self.display_name
         self.description = data["short_description"]
         self.is_official = data["is_official"]
         self.stars = data["star_count"]

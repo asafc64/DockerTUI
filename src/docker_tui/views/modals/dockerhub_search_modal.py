@@ -87,7 +87,7 @@ class DockerhubSearchModal(ModalScreen[str]):
             await self.list_view.clear()
             for image in self.images:
 
-                name = Label(image.name, classes="image-name")
+                name = Label(image.display_name, classes="image-name")
                 if image.is_official:
                     name = Horizontal(name, Label(" ✔", classes="image-v-icon"))
 
