@@ -1,21 +1,17 @@
 ﻿from typing import List
 
-from rich.padding import PaddingDimensions
-from rich.table import Table
-from rich.text import Text
-from textual import on, work
 from textual.app import ComposeResult
-from textual.containers import Container, Vertical, Horizontal
+from textual.containers import Container, Horizontal
 from textual.events import Key
 from textual.screen import ModalScreen
-from textual.widgets import OptionList, Input, ListView, Label, ListItem
+from textual.widgets import Input, ListView, Label, ListItem
 
 from docker_tui.docker.api import search_dockerhub
 from docker_tui.docker.models import DockerHubImage
 from docker_tui.views.components.debounced_input_handler import DebouncedInputHandler
 
 
-class DockerhubSearchModal(ModalScreen[str]):
+class DockerhubSearchModal(ModalScreen[DockerHubImage]):
     DEFAULT_CSS = """
         DockerhubSearchModal {
             align: center top;
@@ -60,6 +56,7 @@ class DockerhubSearchModal(ModalScreen[str]):
             }
         }
     """
+
     def __init__(self):
         super().__init__()
         self.input = Input(id="search-box", placeholder="Search image to pull...")
@@ -70,7 +67,6 @@ class DockerhubSearchModal(ModalScreen[str]):
         self.search_handler = None
         self.images: List[DockerHubImage] = []
 
-
     def compose(self) -> ComposeResult:
         with Container(id="body"):
             yield self.input
@@ -79,30 +75,29 @@ class DockerhubSearchModal(ModalScreen[str]):
     async def on_mount(self):
         self.search_handler = DebouncedInputHandler(input_widget=self.input, callback=self.search)
 
-    @work(group="image-search", exclusive=True)
     async def search(self, text: str) -> None:
         self.list_view.loading = True
         self.images = await search_dockerhub(query=text)
-        async with self.list_view.batch():
-            await self.list_view.clear()
-            for image in self.images:
 
-                name = Label(image.display_name, classes="image-name")
-                if image.is_official:
-                    name = Horizontal(name, Label(" ✔", classes="image-v-icon"))
+        await self.list_view.clear()
+        for image in self.images:
 
-                icon = Label("✔" if image.is_official else " ", classes="image-icon")
-                icon.tooltip = "Official image" if image.is_official else "Unofficial image"
+            name = Label(image.display_name, classes="image-name")
+            if image.is_official:
+                name = Horizontal(name, Label(" ✔", classes="image-v-icon"))
 
-                row = Container(
-                    name,
-                    Label(f"{image.stars}★"),
-                    Label(image.description, classes="image-description"),
-                    classes="search-result")
+            icon = Label("✔" if image.is_official else " ", classes="image-icon")
+            icon.tooltip = "Official image" if image.is_official else "Unofficial image"
 
-                await self.list_view.append(ListItem(row))
-            self.list_view.index = 0
-            self.list_view.loading = False
+            row = Container(
+                name,
+                Label(f"{image.stars}★"),
+                Label(image.description, classes="image-description"),
+                classes="search-result")
+
+            await self.list_view.append(ListItem(row))
+        self.list_view.index = 0
+        self.list_view.loading = False
 
     def on_key(self, event: Key) -> None:
         if event.key == "down" and self.list_view.index is not None:
@@ -112,7 +107,7 @@ class DockerhubSearchModal(ModalScreen[str]):
         if event.key == "enter" and self.list_view.index is not None:
             event.prevent_default()
             event.stop()
-            self.dismiss(self.images[self.list_view.index].name)
+            self.dismiss(self.images[self.list_view.index])
         if event.key == "escape":
             event.prevent_default()
             event.stop()
