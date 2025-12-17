@@ -75,7 +75,7 @@ class ImageListPage(Page):
             return
         approved = await self.app.push_screen_wait(ActionVerificationModal(
             title=f"Are you sure you want to delete image '{self.selected_image.name}'?",
-            button_text="Delete Container",
+            button_text="Delete Image",
             button_variant="error"
         ))
         if not approved:
