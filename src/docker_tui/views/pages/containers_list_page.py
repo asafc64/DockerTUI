@@ -110,7 +110,7 @@ class ContainersListPage(Page):
         if not self.selected_container:
             return
         with self.app.suspend():
-            os.system(f"apis exec -it {self.selected_container.id} sh")
+            os.system(f"docker exec -it {self.selected_container.id} sh")
 
     @work
     async def action_stop(self):
@@ -246,7 +246,7 @@ class ContainersListPage(Page):
         ]
 
     def _build_container_row(self, c: Container, s: ContainerStats | None, is_grouped: bool, is_last_in_group: bool) -> \
-    List[Text]:
+            List[Text]:
         is_active = c.state == "running"
         icon_style = "green" if is_active else self._muted_text_color
         text_style = "" if is_active else self._muted_text_color

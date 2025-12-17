@@ -13,8 +13,8 @@ class Container:
         self.state = data["State"]
         self.status = data["Status"]
         self.created_at = datetime.fromtimestamp(data["Created"])
-        self.project = data["Labels"].get("com.apis.compose.project")
-        self.service = data["Labels"].get("com.apis.compose.service")
+        self.project = data["Labels"].get("com.docker.compose.project")
+        self.service = data["Labels"].get("com.docker.compose.service")
 
 
 class ContainerDetails:
