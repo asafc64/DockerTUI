@@ -68,7 +68,7 @@ class ContainersStatsMonitor(AsyncBackgroundLoop):
         self._last_exception = None
         try:
             # Clear dead listeners
-            for (id, listener) in self._listeners.items():
+            for (id, listener) in list(self._listeners.items()):
                 if not listener.is_running():
                     self._listeners.pop(id)
 
