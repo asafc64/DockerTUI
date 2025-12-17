@@ -1,8 +1,8 @@
-﻿from typing import List
+﻿from typing import List, AsyncGenerator
 
 import aiodocker
 
-from docker_tui.apis.models import Container, ContainerDetails, ImageListItem
+from docker_tui.apis.models import Container, ContainerDetails, ImageListItem, PullingStatus
 
 
 async def list_containers() -> List[Container]:
@@ -52,3 +52,10 @@ async def list_images() -> List[ImageListItem]:
 async def delete_image(id: str):
     async with aiodocker.Docker() as docker:
         await docker.images.delete(name=id)  # id is also ok
+
+
+async def pull_image(namespace: str, repo: str, tag: str) -> AsyncGenerator[PullingStatus, None]:
+    async with aiodocker.Docker() as docker:
+        stream = docker.images.pull(from_image=f"{namespace}/{repo}", tag=tag, stream=True)
+        async for item in stream:
+            yield PullingStatus(item)

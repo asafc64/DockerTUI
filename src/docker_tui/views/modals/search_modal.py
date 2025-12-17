@@ -4,11 +4,8 @@ from typing import List, Any
 from rapidfuzz import fuzz, utils
 from rapidfuzz.distance import ScoreAlignment
 from rich.columns import Columns
-from rich.console import Group
-from rich.layout import Layout
-from rich.table import Table
 from rich.text import Text
-from textual import on, events
+from textual import on
 from textual.app import ComposeResult
 from textual.containers import Container
 from textual.events import Key
@@ -25,8 +22,8 @@ class SearchOption:
     id: str
     args: List[Any] = None
 
-class SearchModal(ModalScreen[SearchOption]):
 
+class SearchModal(ModalScreen[SearchOption]):
     @dataclass
     class OptionsGroup:
         name: str
@@ -39,7 +36,6 @@ class SearchModal(ModalScreen[SearchOption]):
         score: float
         start_idx: int
         end_idx: int
-
 
     DEFAULT_CSS = """
         SearchModal {
@@ -107,8 +103,9 @@ class SearchModal(ModalScreen[SearchOption]):
         for group in self.grouped_options:
             matches = []
             for option in group.options:
-                score_align = fuzz.partial_ratio_alignment(text, option.text, processor=utils.default_process, score_cutoff=70)\
-                              if text else ScoreAlignment(100, 0, 0, 0, 0)
+                score_align = fuzz.partial_ratio_alignment(text, option.text, processor=utils.default_process,
+                                                           score_cutoff=70) \
+                    if text else ScoreAlignment(100, 0, 0, 0, 0)
                 if score_align:
                     matches.append(SearchModal.Match(option=option, score=score_align.score,
                                                      start_idx=score_align.dest_start, end_idx=score_align.dest_end))
@@ -116,34 +113,18 @@ class SearchModal(ModalScreen[SearchOption]):
                 matches_to_add = list(sorted(matches, key=lambda m: m.score))[:available_spots]
                 grouped_matches.append(matches_to_add)
                 available_spots -= len(matches_to_add)
-            if available_spots <=0:
+            if available_spots <= 0:
                 break
 
         renderable_options = []
 
         for matches in grouped_matches:
             for m in matches:
-
                 primary = Text(" " + m.option.text, overflow="ellipsis")
                 primary.stylize(style="blue", start=m.start_idx + 1, end=m.end_idx + 1)
                 secondary = Text(m.option.group + " ", style="#888888", justify="right")
+                renderable_options.append(Option(Columns([primary, secondary], expand=True), id=m.option.id))
 
-                panel_group = Group(
-                    Columns([primary, Text("A")]),
-                    Columns([secondary, Text("B")])
-                )
-
-                t = Table.grid(expand=True)
-                t.add_row(primary, Text("A"))
-                t.add_row(secondary, Text("B"))
-
-                l = Layout(minimum_size=2)
-                l.split_row(
-                    Layout(primary, name="l", ratio=2),
-                    Layout(secondary, name="r"),
-                )
-
-                renderable_options.append(Option(t, id=m.option.id))
             renderable_options.append(None)
 
         async with self.list_view.batch():

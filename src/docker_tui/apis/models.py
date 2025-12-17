@@ -74,7 +74,14 @@ class DockerHubTag:
             self.architecture = data["architecture"]
             self.digest = data["digest"]
             self.os = data["os"]
+            self.variant = data["variant"]
             self.size = data["size"]  # Bytes
+
+        def __str__(self):
+            if self.os == "unknown":
+                return ''
+
+            return "/".join([x for x in [self.os, self.architecture, self.variant] if x])
 
     def __init__(self, data: Dict[str, Any]):
         self.images = [DockerHubTag.Image(i) for i in data["images"]]
@@ -82,3 +89,21 @@ class DockerHubTag:
         self.full_size = data["full_size"]
         self.digest = data.get("digest", None)
         self.last_updated = datetime.fromisoformat(data["last_updated"].replace("Z", "+00:00"))
+
+
+class PullingStatus:
+    # {}
+    # {'current': 1048576, 'total': 1835502}
+    # {'hidecounts': True}
+    # {'current': 1, 'units': 's'}
+    class ProgressDetail:
+        def __init__(self, data: Dict[str, Any]):
+            self.current: int | None = data.get("current", None)
+            self.total: str | None = data.get("total", None)
+            self.hide_counts: bool | None = data.get("hidecounts", None)
+            self.unit: str | None = data.get("unit", None)
+
+    def __init__(self, data: Dict[str, Any]):
+        self.id: str | None = data.get("id", None)
+        self.status: str = data["status"]
+        self.progress_detail = PullingStatus.ProgressDetail(data.get("progressDetail", {}))
