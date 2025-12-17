@@ -35,7 +35,7 @@ class DockerTuiApp(App):
     BINDINGS = [
         Binding("q", "quit", "Quit", group=Binding.Group("Navigation")),
         Binding("escape", "back", "Back", group=Binding.Group("Navigation")),
-        Binding("s", "search", "Search", group=Binding.Group("Navigation")),
+        Binding("/", "navigate", "Navigate", key_display="/", group=Binding.Group("Navigation")),
         # Binding("c", "show_tab('containers')", "Containers", group=Binding.Group("Navigation")),
         # Binding("v", "show_tab('volumes')", "Volumes", group=Binding.Group("Navigation")),
         # Binding("i", "show_tab('images')", "Images", group=Binding.Group("Navigation")),
@@ -46,8 +46,7 @@ class DockerTuiApp(App):
         self.current_page: Page = None
 
     async def on_mount(self):
-        # self.show_page(page=ContainersListPage())
-        self.show_page(page=ImageListPage())
+        self.show_page(page=ContainersListPage())
         ContainersStatsMonitor.instance().start()
         ImagesProvider.instance().start()
 
@@ -61,7 +60,7 @@ class DockerTuiApp(App):
             yield Container(id="page-host")
 
     def on_page_nav(self, nav: Page.Nav):
-       self.show_page(page=nav.page)
+        self.show_page(page=nav.page)
 
     def action_back(self):
         if self.current_page.is_root_page:
@@ -70,7 +69,7 @@ class DockerTuiApp(App):
             self.current_page.nav_back()
 
     @work
-    async def action_search(self):
+    async def action_navigate(self):
         # Pages
         options = [
             SearchOption("Containers", "Page", 1, "goto_containers_list"),
@@ -126,9 +125,11 @@ class DockerTuiApp(App):
         self.query_one("#page-host").border_title = page.title
         self.current_page = page
 
+
 def main():
     app = DockerTuiApp()
     app.run()
+
 
 if __name__ == "__main__":
     main()
