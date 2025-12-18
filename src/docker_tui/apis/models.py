@@ -4,6 +4,13 @@ from typing import List, Dict, Any
 from aiodocker.containers import DockerContainer
 
 
+class Version:
+    def __init__(self, data: Dict[str, Any]):
+        self.server = data["Platform"]["Name"]
+        self.docker_engine_version = data["Version"]
+        self.docker_api_version = data["ApiVersion"]
+
+
 class Container:
     def __init__(self, data: DockerContainer):
         self.id = data["Id"]

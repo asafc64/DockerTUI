@@ -2,20 +2,22 @@
 
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual.containers import Grid, Container, Horizontal, Vertical
+from textual.containers import Horizontal
 from textual.keys import KEY_DISPLAY_ALIASES
 from textual.screen import Screen
 from textual.widget import Widget
-from textual.widgets import Label, Rule
+from textual.widgets import Label
+
 
 class ShortcutsGrid(Widget):
     DEFAULT_CSS = """
         ShortcutsGrid {
             layout: grid;
+            width: auto;
             height: auto;
-            width: 1fr;
             grid-size: 2;
-            grid-columns: auto 1fr;
+            grid-columns: auto auto;
+            padding-left: 3;
             
             .title{
                 column-span: 2;
@@ -29,6 +31,7 @@ class ShortcutsGrid(Widget):
             }
         }
     """
+
     def __init__(self, title: str, bindings: List[Binding]):
         super().__init__()
 
@@ -38,7 +41,7 @@ class ShortcutsGrid(Widget):
             action_key = b.description
             actions.setdefault(action_key, []).append(b.key_display or KEY_DISPLAY_ALIASES.get(b.key) or b.key)
 
-        self.styles.height = 1 +len(actions)
+        self.styles.height = 1 + len(actions)
         self.title = title
         self.actions = actions
 
@@ -48,23 +51,18 @@ class ShortcutsGrid(Widget):
             yield Label(",".join([f"{k}" for k in hotkeys]), classes="binding-key")
             yield Label(description)
 
+
 class Shortcuts(Horizontal):
-    BORDER_TITLE = "Hello Widget"
     DEFAULT_CSS = """
         Shortcuts{
-            dock: top;
             layout: horizontal;
-            width: 100%;
             height: auto;
-            padding: 0 1;
-            # background: $panel;
-            # color: $foreground;
+            width: auto;
         }
         .nav {
              background: red;
              max-width: 40;
         }
-        
     """
 
     def bindings_changed(self, screen: Screen) -> None:
@@ -87,4 +85,3 @@ class Shortcuts(Horizontal):
 
         for (g, bs) in sorted(groups.items(), key=(lambda g: 0 if g[0] == "Navigation" else 1)):
             yield ShortcutsGrid(g, list(bs))
-
