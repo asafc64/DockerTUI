@@ -2,7 +2,13 @@
 
 import aiodocker
 
-from docker_tui.apis.models import Container, ContainerDetails, ImageListItem, PullingStatus
+from docker_tui.apis.models import Container, ContainerDetails, ImageListItem, PullingStatus, Version
+
+
+async def get_version() -> Version:
+    async with aiodocker.Docker() as docker:
+        v = await docker.version()
+        return Version(data=v)
 
 
 async def list_containers() -> List[Container]:
