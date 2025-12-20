@@ -187,13 +187,6 @@ class ContainersListPage(Page):
         if self.table.loading:
             self.table.loading = False
 
-        # The row to select is either the default one or the current one
-        # [!] Note that we can use the default only once
-        container_id_to_select = \
-            self.default_selected_container_id or \
-            (self.selected_container.id if self.selected_container else None)
-        self.default_selected_container_id = None
-
         projects = {}
         for c in containers:
             projects.setdefault(c.project, []).append(c)
@@ -208,7 +201,7 @@ class ContainersListPage(Page):
 
             for i, c in enumerate(project_containers):
                 row_key = f"{c.id};{c.name}"
-                selected = c.id == container_id_to_select
+                selected = c.id == self.default_selected_container_id
                 stats = containers_stats.get(c.id)
                 cells = self._build_container_row(c=c, s=stats, is_grouped=grouped,
                                                   is_last_in_group=(i == len(project_containers) - 1))
@@ -216,6 +209,7 @@ class ContainersListPage(Page):
 
         self.table.update_table(data=data)
         self.table.focus()
+        self.default_selected_container_id = None
 
     @property
     def _normal_text_color(self):

@@ -100,18 +100,12 @@ class ImageListPage(Page):
 
         in_use_image_ids = set([c.image_id for c in containers])
 
-        # The row to select is either the default one or the current one
-        # [!] Note that we can use the default only once
-        image_id_to_select = self.default_selected_image_id or \
-                             (self.selected_image.id if self.selected_image else None)
-        self.default_selected_image_id = None
-
         if self.table.loading:
             self.table.loading = False
 
         data = Data(rows=[])
         for image in images:
-            selected = image.id == image_id_to_select
+            selected = image.id == self.default_selected_image_id
             is_active = image.id in in_use_image_ids
             icon = '●' if is_active else '○'
             icon_style = "green" if is_active else ""
@@ -127,3 +121,4 @@ class ImageListPage(Page):
 
         self.table.update_table(data=data)
         self.table.focus()
+        self.default_selected_image_id = None
