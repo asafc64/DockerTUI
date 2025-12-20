@@ -28,6 +28,7 @@ class Cell:
 class Row:
     cells: List[Cell]
     row_key: str
+    selected: bool = False
 
 
 @dataclass
@@ -77,6 +78,9 @@ class ResponsiveTable(Widget):
     def on_resize(self, event: events.Resize):
         self._recompute_columns()
 
+    def _on_focus(self, event: events.Focus) -> None:
+        self.table.focus()
+
     def update_table(self, data: Data):
         self._data = data
 
@@ -96,6 +100,13 @@ class ResponsiveTable(Widget):
         rows_keys_to_remove = set([k.value for k in self.table.rows.keys()]) - set([r.row_key for r in data.rows])
         for row_key in rows_keys_to_remove:
             self.table.remove_row(row_key=row_key)
+
+        # update selected row
+        selected_row_index = next((i for i, r in enumerate(data.rows) if r.selected), None)
+        if selected_row_index is not None:
+            self.table.move_cursor(row=selected_row_index)
+
+        self.table.focus()
 
     def get_selected_row_key(self) -> str | None:
         if not self._data.rows:
@@ -132,6 +143,8 @@ class ResponsiveTable(Widget):
             col_to_remove = max(visible_columns, key=lambda col: col.priority)
             visible_columns.remove(col_to_remove)
 
+        selected_row = self.table.cursor_row
+
         self.table.clear(columns=True)
 
         for placement in placements:
@@ -146,3 +159,6 @@ class ResponsiveTable(Widget):
         for row in self._data.rows:
             cells = self._get_cells_to_insert(cells=row.cells)
             self.table.add_row(*(c.value for c in cells), key=row.row_key)
+
+        self.table.move_cursor(row=selected_row)
+        self.table.focus()

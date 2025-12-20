@@ -208,13 +208,11 @@ class ContainersListPage(Page):
 
             for i, c in enumerate(project_containers):
                 row_key = f"{c.id};{c.name}"
+                selected = c.id == container_id_to_select
                 stats = containers_stats.get(c.id)
                 cells = self._build_container_row(c=c, s=stats, is_grouped=grouped,
                                                   is_last_in_group=(i == len(project_containers) - 1))
-                data.rows.append(Row(cells=cells, row_key=row_key))
-
-                # if c.id == container_id_to_select:
-                #     self.table.move_cursor(row=len(self.table.rows))
+                data.rows.append(Row(cells=cells, row_key=row_key, selected=selected))
 
         self.table.update_table(data=data)
         self.table.focus()

@@ -111,6 +111,7 @@ class ImageListPage(Page):
 
         data = Data(rows=[])
         for image in images:
+            selected = image.id == image_id_to_select
             is_active = image.id in in_use_image_ids
             icon = '●' if is_active else '○'
             icon_style = "green" if is_active else ""
@@ -122,10 +123,7 @@ class ImageListPage(Page):
                 Cell("created_at", Text(human(image.created_at, precision=1))),
                 Cell("size", Text(f"{image.size:.2f} MB"))
             ]
-            data.rows.append(Row(cells=cells, row_key=f"{image.id};{image.name}"))
-
-            # if image.id == image_id_to_select:
-            #     self.table.move_cursor(row=len(self.table.rows))
+            data.rows.append(Row(cells=cells, row_key=f"{image.id};{image.name}", selected=selected))
 
         self.table.update_table(data=data)
         self.table.focus()
