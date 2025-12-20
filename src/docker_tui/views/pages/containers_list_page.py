@@ -14,6 +14,7 @@ from docker_tui.apis.docker_api import stop_container, restart_container, delete
 from docker_tui.apis.models import Container
 from docker_tui.services.containers_stats_monitor import ContainersStatsMonitor, ContainerStats
 from docker_tui.utils.input_helpers import MouseInputHelper
+from docker_tui.views.components.responsive_table import ResponsiveTable, ColumnDefinition, Data, Row, Cell
 from docker_tui.views.modals.action_verification_modal import ActionVerificationModal
 from docker_tui.views.pages.page import Page
 
@@ -28,22 +29,6 @@ class ContainersListPage(Page):
     class Row:
         cells: List[Text]
         key: str
-
-    DEFAULT_CSS = """
-        #containers-table {
-            height: 1fr;
-            overflow-y: auto;
-            width: 100%;
-            background: transparent;
-            
-            .datatable--header{
-                background: transparent;
-            }
-            .datatable--hover, .datatable--cursor{
-                text-style: none;
-            }
-        }
-    """
 
     BINDINGS = [
         Binding("d", "show_details", "Show Details", group=Binding.Group("Inspect")),
@@ -61,8 +46,17 @@ class ContainersListPage(Page):
 
     def __init__(self, select_container_id: str = None):
         super().__init__("Containers")
-        self.table = DataTable(cursor_type='row', id="containers-table")
-        self.table.add_columns("", "Name", "Id", "Image", "CPU", "Memory", "Status")
+        self.table = ResponsiveTable(
+            id="containers-table",
+            columns=[
+                ColumnDefinition("icon", "", "1", 0),
+                ColumnDefinition("name", "Name", "1fr", 1, min_width=20),
+                ColumnDefinition("id", "Id", "1fr", 4, min_width=12),
+                ColumnDefinition("image", "Image", "1fr", 3, min_width=12),
+                ColumnDefinition("cpu", "CPU", "1fr", 5),
+                ColumnDefinition("mem", "Memory", "1fr", 6),
+                ColumnDefinition("status", "Status", "1fr", 2),
+            ])
         self.default_selected_container_id = select_container_id or self.last_selected_container_id
 
     def compose(self) -> ComposeResult:
@@ -82,11 +76,8 @@ class ContainersListPage(Page):
 
     @property
     def selected_container(self) -> SelectedContainer | None:
-        if not self.table.rows:
-            return None
-
-        selected_key = list(self.table.rows)[self.table.cursor_row].value
-        if not selected_key.startswith(self.PROJECT_ROW_KEY_PREFIX):
+        selected_key = self.table.get_selected_row_key()
+        if selected_key and not selected_key.startswith(self.PROJECT_ROW_KEY_PREFIX):
             id, name = selected_key.split(";", 2)
             return ContainersListPage.SelectedContainer(id=id, name=name)
 
@@ -133,46 +124,49 @@ class ContainersListPage(Page):
 
     @work
     async def action_restart(self):
-        if not self.selected_container:
+        container = self.selected_container
+        if not container:
             return
         try:
-            await restart_container(id=self.selected_container.id)
+            await restart_container(id=container.id)
         except DockerError as ex:
             self.notify(ex.message, title="Error", severity="error")
             return
-        self.notify(f"Container '{self.selected_container.name}' was restarted")
+        self.notify(f"Container '{container.name}' was restarted")
         self.refresh_table_data()
 
     @work
     async def action_delete(self):
-        if not self.selected_container:
+        container = self.selected_container
+        if not container:
             return
         approved = await self.app.push_screen_wait(ActionVerificationModal(
-            title=f"Are you sure you want to delete container '{self.selected_container.name}'?",
+            title=f"Are you sure you want to delete container '{container.name}'?",
             button_text="Delete Container",
             button_variant="error"
         ))
         if not approved:
             return
         try:
-            await delete_container(id=self.selected_container.id)
+            await delete_container(id=container.id)
         except DockerError as ex:
             self.notify(ex.message, title="Error", severity="error")
             return
-        self.notify(f"Container '{self.selected_container.name}' was deleted")
+        self.notify(f"Container '{container.name}' was deleted")
         self.refresh_table_data()
 
     @on(DataTable.RowSelected)
     def handle_row_selected(self, event: DataTable.RowSelected) -> None:
-        if not self.selected_container:
+        container = self.selected_container
+        if not container:
             return
 
         if not MouseInputHelper.is_double_click():
             return
 
         from docker_tui.views.pages.container_details_page import ContainerDetailsPage
-        self.nav_to(page=ContainerDetailsPage(container_name=self.selected_container.name,
-                                              container_id=self.selected_container.id))
+        self.nav_to(page=ContainerDetailsPage(container_name=container.name,
+                                              container_id=container.id))
 
     # @on(DataTable.RowHighlighted)
     # def handle_row_highlighted(self, event: DataTable.RowHighlighted) -> None:
@@ -200,32 +194,29 @@ class ContainersListPage(Page):
             (self.selected_container.id if self.selected_container else None)
         self.default_selected_container_id = None
 
-        scroll_to_do = self.table.scroll_offset
-
-        self.table.clear()
-
         projects = {}
         for c in containers:
             projects.setdefault(c.project, []).append(c)
 
+        data = Data(rows=[])
         for (project_name, project_containers) in projects.items():
             grouped = False
             if project_name:
-                row = self._build_project_row(name=project_name, containers=project_containers)
+                cells = self._build_project_row(name=project_name, containers=project_containers)
                 grouped = True
-                self.table.add_row(*row, key=self.PROJECT_ROW_KEY_PREFIX + project_name)
+                data.rows.append(Row(cells=cells, row_key=self.PROJECT_ROW_KEY_PREFIX + project_name))
 
             for i, c in enumerate(project_containers):
                 row_key = f"{c.id};{c.name}"
                 stats = containers_stats.get(c.id)
-                row = self._build_container_row(c=c, s=stats, is_grouped=grouped,
-                                                is_last_in_group=(i == len(project_containers) - 1))
-                self.table.add_row(*row, key=row_key)
+                cells = self._build_container_row(c=c, s=stats, is_grouped=grouped,
+                                                  is_last_in_group=(i == len(project_containers) - 1))
+                data.rows.append(Row(cells=cells, row_key=row_key))
 
-                if c.id == container_id_to_select:
-                    self.table.move_cursor(row=len(self.table.rows))
+                # if c.id == container_id_to_select:
+                #     self.table.move_cursor(row=len(self.table.rows))
 
-        self.table.scroll_to(x=scroll_to_do.x, y=scroll_to_do.y, immediate=True)
+        self.table.update_table(data=data)
         self.table.focus()
 
     @property
@@ -236,17 +227,17 @@ class ContainersListPage(Page):
     def _muted_text_color(self):
         return "#888888"
 
-    def _build_project_row(self, name: str, containers: List[Container]) -> List[Text]:
+    def _build_project_row(self, name: str, containers: List[Container]) -> List[Cell]:
         any_active = any((c.state == "running" for c in containers))
         icon_color = "blue" if any_active else self._muted_text_color
         text_style = "" if any_active else self._muted_text_color
         return [
-            Text('P', style=f"bold {icon_color}"),
-            Text(name, style=text_style)
+            Cell("icon", Text('P', style=f"bold {icon_color}")),
+            Cell("name", Text(name, style=text_style)),
         ]
 
     def _build_container_row(self, c: Container, s: ContainerStats | None, is_grouped: bool, is_last_in_group: bool) -> \
-            List[Text]:
+            List[Cell]:
         is_active = c.state == "running"
         icon_style = "green" if is_active else self._muted_text_color
         text_style = "" if is_active else self._muted_text_color
@@ -255,11 +246,11 @@ class ContainersListPage(Page):
         cpu = f"{s.cpu_usage[-1].value:.2f}%" if s else ""
         memory = f"{s.memory_usage[-1].value:.2f} MB" if s else ""
         return [
-            Text(icon, style=icon_style),
-            Text(name, style=text_style),
-            Text(c.id[:12], style=text_style),
-            Text(c.image, style=text_style),
-            Text(cpu, style=text_style),
-            Text(memory, style=text_style),
-            Text(c.status, style=text_style)
+            Cell("icon", Text(icon, style=icon_style)),
+            Cell("name", Text(name, style=text_style)),
+            Cell("id", Text(c.id[:12], style=text_style)),
+            Cell("image", Text(c.image, style=text_style)),
+            Cell("cpu", Text(cpu, style=text_style)),
+            Cell("mem", Text(memory, style=text_style)),
+            Cell("status", Text(c.status, style=text_style))
         ]
