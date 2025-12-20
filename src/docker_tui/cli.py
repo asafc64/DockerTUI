@@ -107,6 +107,10 @@ class DockerTuiApp(App):
             container_name = selected.args[1]
             self.show_page(ContainerLogPage(container_id=container_id, container_name=container_name))
 
+        if selected.id.startswith("goto_image_row"):
+            image_id = selected.args[0]
+            self.show_page(ImageListPage(select_image_id=image_id))
+
     def show_page(self, page: Page):
         main = self.query_one("#page-host")
         main.remove_children()

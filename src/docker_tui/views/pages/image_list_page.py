@@ -6,11 +6,11 @@ from rich.text import Text
 from textual import work
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual.widgets import DataTable
 
 from docker_tui.apis.docker_api import delete_image
 from docker_tui.services.containers_stats_monitor import ContainersStatsMonitor
 from docker_tui.services.images_provider import ImagesProvider
+from docker_tui.views.components.responsive_table import ResponsiveTable, ColumnDefinition, Data, Row, Cell
 from docker_tui.views.modals.action_verification_modal import ActionVerificationModal
 from docker_tui.views.modals.dockerhub_search_modal import DockerhubSearchModal
 from docker_tui.views.pages.page import Page
@@ -22,22 +22,6 @@ class ImageListPage(Page):
         id: str
         name: str
 
-    DEFAULT_CSS = """
-            #images-table {
-                height: 1fr;
-                overflow-y: auto;
-                width: 100%;
-                background: transparent;
-
-                .datatable--header{
-                    background: transparent;
-                }
-                .datatable--hover, .datatable--cursor{
-                    text-style: none;
-                }
-            }
-        """
-
     BINDINGS = [
         Binding("p", "pull", "Pull", group=Binding.Group("Actions")),
         Binding("delete", "delete", "Delete", group=Binding.Group("Actions")),
@@ -47,8 +31,16 @@ class ImageListPage(Page):
 
     def __init__(self, select_image_id: str = None):
         super().__init__("Images")
-        self.table = DataTable(cursor_type='row', id="images-table")
-        self.table.add_columns("", "Name", "Tag", "Id", "Created At", "Size")
+        self.table = ResponsiveTable(
+            id="images-table",
+            columns=[
+                ColumnDefinition("icon", "", "1", 0),
+                ColumnDefinition("name", "Name", "1fr", 1, min_width=15),
+                ColumnDefinition("tag", "Tag", "1fr", 2, min_width=10),
+                ColumnDefinition("id", "Id", "1fr", 5, min_width=12),
+                ColumnDefinition("created_at", "Created At", "1fr", 3),
+                ColumnDefinition("size", "Size", "1fr", 4),
+            ])
         self.default_selected_image_id = select_image_id
 
     def compose(self) -> ComposeResult:
@@ -90,10 +82,10 @@ class ImageListPage(Page):
 
     @property
     def selected_image(self) -> SelectedImage | None:
-        if not self.table.rows:
+        selected_key = self.table.get_selected_row_key()
+        if not selected_key:
             return None
 
-        selected_key = list(self.table.rows)[self.table.cursor_row].value
         id, name = selected_key.split(";", 2)
         return ImageListPage.SelectedImage(id=id, name=name)
 
@@ -108,29 +100,25 @@ class ImageListPage(Page):
 
         in_use_image_ids = set([c.image_id for c in containers])
 
-        # The row to select is either the default one or the current one
-        # [!] Note that we can use the default only once
-        image_id_to_select = self.default_selected_image_id or \
-                             (self.selected_image.id if self.selected_image else None)
-        self.default_selected_image_id = None
-
         if self.table.loading:
             self.table.loading = False
 
-        self.table.clear()
-
+        data = Data(rows=[])
         for image in images:
+            selected = image.id == self.default_selected_image_id
             is_active = image.id in in_use_image_ids
             icon = '●' if is_active else '○'
             icon_style = "green" if is_active else ""
-            self.table.add_row(Text(icon, style=icon_style),
-                               Text(image.name),
-                               Text(image.tag),
-                               Text(image.short_id),
-                               Text(human(image.created_at, precision=1)),
-                               Text(f"{image.size:.2f} MB"),
-                               key=f"{image.id};{image.name}")
-            if image.id == image_id_to_select:
-                self.table.move_cursor(row=len(self.table.rows))
+            cells = [
+                Cell("icon", Text(icon, style=icon_style)),
+                Cell("name", Text(image.name)),
+                Cell("tag", Text(image.tag)),
+                Cell("id", Text(image.short_id)),
+                Cell("created_at", Text(human(image.created_at, precision=1))),
+                Cell("size", Text(f"{image.size:.2f} MB"))
+            ]
+            data.rows.append(Row(cells=cells, row_key=f"{image.id};{image.name}", selected=selected))
 
+        self.table.update_table(data=data)
         self.table.focus()
+        self.default_selected_image_id = None
