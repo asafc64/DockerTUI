@@ -2,18 +2,20 @@
 from dataclasses import dataclass
 from typing import List
 
+import textual.containers
 from aiodocker import DockerError
 from rich.text import Text
 from textual import work, on, messages
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.color import Color
-from textual.widgets import DataTable
+from textual.widgets import DataTable, Placeholder
 
 from docker_tui.apis.docker_api import stop_container, restart_container, delete_container
 from docker_tui.apis.models import Container
 from docker_tui.services.containers_stats_monitor import ContainersStatsMonitor, ContainerStats
 from docker_tui.utils.input_helpers import MouseInputHelper
+from docker_tui.views.components.dual_pane_container import DualPaneContainer
 from docker_tui.views.components.responsive_table import ResponsiveTable, ColumnDefinition, Data, Row, Cell
 from docker_tui.views.modals.action_verification_modal import ActionVerificationModal
 from docker_tui.views.pages.page import Page
@@ -34,6 +36,7 @@ class ContainersListPage(Page):
         Binding("d", "show_details", "Show Details", group=Binding.Group("Inspect")),
         Binding("l", "show_logs", "Show logs", group=Binding.Group("Inspect")),
         Binding("e", "exec", "Exec", group=Binding.Group("Inspect")),
+        Binding(".", "toggle_preview", "Preview", key_display=".", group=Binding.Group("Inspect")),
         Binding("k", "stop", "Stop", group=Binding.Group("Actions")),
         Binding("r", "restart", "Restart", group=Binding.Group("Actions")),
         Binding("delete", "delete", "Delete", group=Binding.Group("Actions")),
@@ -43,9 +46,11 @@ class ContainersListPage(Page):
 
     is_root_page = True
     last_selected_container_id = None
+    preview_enabled = False
 
     def __init__(self, select_container_id: str = None):
         super().__init__("Containers")
+        self.preview = textual.containers.Container(Placeholder("PRIVIEW"))
         self.table = ResponsiveTable(
             id="containers-table",
             columns=[
@@ -60,7 +65,7 @@ class ContainersListPage(Page):
         self.default_selected_container_id = select_container_id or self.last_selected_container_id
 
     def compose(self) -> ComposeResult:
-        yield self.table
+        yield DualPaneContainer(self.table, self.preview)
 
     @work
     async def on_mount(self) -> None:
@@ -82,6 +87,9 @@ class ContainersListPage(Page):
             return ContainersListPage.SelectedContainer(id=id, name=name)
 
         return None
+
+    def action_toggle_preview(self):
+        self.query_one(DualPaneContainer).toggle_pages_layout()
 
     def action_show_details(self):
         if not self.selected_container:
