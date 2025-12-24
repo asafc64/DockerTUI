@@ -1,6 +1,4 @@
-﻿from abc import ABC
-
-from textual.message import Message
+﻿from textual.message import Message
 from textual.widget import Widget
 from textual.widgets import Static
 
@@ -8,6 +6,7 @@ from textual.widgets import Static
 class Page(Widget):
     can_focus = True
     is_root_page = False
+
     class Nav(Message):
         def __init__(self, page: "Page"):
             self.page = page
@@ -27,17 +26,15 @@ class Page(Widget):
         pass
 
 
-
-
-
 class HomePage(Page):
 
     def __init__(self):
         super().__init__(title="Home")
+
     def compose(self):
         yield Static("🏠 Home Page", id="page")
+
 
 class SettingsPage(Page):
     def compose(self):
         yield Static("⚙️ Settings Page", id="page")
-
