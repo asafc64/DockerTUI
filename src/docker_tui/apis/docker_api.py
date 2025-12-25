@@ -24,11 +24,12 @@ async def get_container_details(id: str) -> ContainerDetails:
         return c
 
 
-async def get_container_logs(id: str) -> list[str]:
+async def get_container_logs(id: str) -> AsyncGenerator[str, None]:
     async with aiodocker.Docker() as docker:
         container = await docker.containers.get(container_id=id)
-        logs = await container.log(stdout=True, stderr=True, timestamps=True)
-        return logs
+        stream = container.log(stdout=True, stderr=True, timestamps=True, follow=True)
+        async for line in stream:
+            yield line
 
 
 async def stop_container(id: str):

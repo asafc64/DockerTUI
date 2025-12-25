@@ -106,8 +106,6 @@ class ResponsiveTable(Widget):
         if selected_row_index is not None:
             self.table.move_cursor(row=selected_row_index)
 
-        self.table.focus()
-
     def get_selected_row_key(self) -> str | None:
         if not self._data.rows:
             return None

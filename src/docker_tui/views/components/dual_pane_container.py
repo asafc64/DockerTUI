@@ -17,35 +17,43 @@ class PaneLayout(Enum):
 
 class DualPaneContainer(Container):
     DEFAULT_CSS = """
-        DualPaneContainer.only-primary { 
-            *:last-child {
-                height: 0;
-                min-height: 0;
-                overflow: hidden;
+        DualPaneContainer{
+            & > *:last-child {
+                padding-left: 1;
             }
-            .pane-divider {
-                height: 0;
-                width: 0;
-                overflow: hidden;
-            }
-        }
-        DualPaneContainer.vertical {
-            layout: grid;
-            grid-rows: 1fr 1 1fr;
             
-            .pane-divider {
-                width: 1fr;
-                border-top: solid $secondary;
+            &.only-primary { 
+                & > *:last-child {
+                    height: 0;
+                    min-height: 0;
+                    overflow: hidden;
+                }
+                .pane-divider {
+                    height: 0;
+                    width: 0;
+                    overflow: hidden;
+                }
             }
-        }
-        DualPaneContainer.horizontal {
-            layout: grid;
-            grid-size: 3;
-            grid-columns: 1fr 1 1fr;
             
-          .pane-divider {
-                height: 1fr;
-                border-left: solid $secondary;
+            &.vertical {
+                layout: grid;
+                grid-rows: 1fr 1 1fr;
+                
+                .pane-divider {
+                    width: 1fr;
+                    border-top: solid $secondary;
+                }
+            }
+            
+            &.horizontal {
+                layout: grid;
+                grid-size: 3;
+                grid-columns: 1fr 1 1fr;
+                
+                .pane-divider {
+                    height: 1fr;
+                    border-left: solid $secondary;
+                }
             }
         }
     """

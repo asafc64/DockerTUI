@@ -4,7 +4,7 @@ from textual.widgets import Static
 
 
 class Page(Widget):
-    can_focus = True
+    can_focus = False
     is_root_page = False
 
     class Nav(Message):
@@ -17,7 +17,9 @@ class Page(Widget):
         self.title = title
 
     def on_mount(self):
-        self.focus()
+        pass
+
+    #     self.focus()
 
     def nav_to(self, page: "Page"):
         self.post_message(self.Nav(page))

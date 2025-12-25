@@ -9,13 +9,14 @@ from textual import work, on, messages
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.color import Color
-from textual.widgets import DataTable, Placeholder
+from textual.widgets import DataTable
 
 from docker_tui.apis.docker_api import stop_container, restart_container, delete_container
 from docker_tui.apis.models import Container
 from docker_tui.services.containers_stats_monitor import ContainersStatsMonitor, ContainerStats
 from docker_tui.utils.input_helpers import MouseInputHelper
-from docker_tui.views.components.dual_pane_container import DualPaneContainer
+from docker_tui.views.components.containers_log import ContainersLog
+from docker_tui.views.components.dual_pane_container import DualPaneContainer, PaneLayout
 from docker_tui.views.components.responsive_table import ResponsiveTable, ColumnDefinition, Data, Row, Cell
 from docker_tui.views.modals.action_verification_modal import ActionVerificationModal
 from docker_tui.views.pages.page import Page
@@ -50,7 +51,7 @@ class ContainersListPage(Page):
 
     def __init__(self, select_container_id: str = None):
         super().__init__("Containers")
-        self.preview = textual.containers.Container(Placeholder("PRIVIEW"))
+        self.preview = textual.containers.Container()
         self.table = ResponsiveTable(
             id="containers-table",
             columns=[
@@ -86,6 +87,13 @@ class ContainersListPage(Page):
             id, name = selected_key.split(";", 2)
             return ContainersListPage.SelectedContainer(id=id, name=name)
 
+        return None
+
+    @property
+    def selected_project(self) -> str | None:
+        selected_key = self.table.get_selected_row_key()
+        if selected_key and selected_key.startswith(self.PROJECT_ROW_KEY_PREFIX):
+            return selected_key.lstrip(self.PROJECT_ROW_KEY_PREFIX)
         return None
 
     def action_toggle_preview(self):
@@ -176,8 +184,31 @@ class ContainersListPage(Page):
         self.nav_to(page=ContainerDetailsPage(container_name=container.name,
                                               container_id=container.id))
 
-    # @on(DataTable.RowHighlighted)
-    # def handle_row_highlighted(self, event: DataTable.RowHighlighted) -> None:
+    @on(DataTable.RowHighlighted)
+    def handle_row_highlighted(self, event: DataTable.RowHighlighted) -> None:
+        container_ids = []
+        container = self.selected_container
+        if container:
+            container_ids = [container.id]
+        else:
+            project = self.selected_project
+            if project:
+                all_containers = ContainersStatsMonitor.instance().get_all_containers()
+                container_ids = [c.id for c in all_containers if c.project == project]
+
+        if not container_ids:
+            return
+
+        if self.query_one(DualPaneContainer).active_layout == PaneLayout.OnlyPrimary:
+            return
+
+        if self.preview.children \
+                and self.preview.children[0].container_ids == frozenset(container_ids):
+            return
+
+        self.preview.remove_children()
+        self.preview.mount(ContainersLog(container_ids=container_ids))
+
     #     if event.row_key.value.startswith(self.PROJECT_ROW_KEY_PREFIX):
     #         ContainersListPage.last_selected_container_id = None
     #     else:
