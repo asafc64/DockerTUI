@@ -4,7 +4,12 @@ Yet another console user interface for docker,
 inspired by [k9s](https://github.com/derailed/k9s),
 and based on [Textual](https://github.com/Textualize/textual).
 
-<img src="https://raw.githubusercontent.com/asafc64/DockerTUI/refs/heads/master/assets/containers_list_screenshot.svg"/>
+<img src="https://raw.githubusercontent.com/asafc64/DockerTUI/refs/heads/master/assets/containers_list.png"/>
+
+<div align="center">
+    <img width="45%" src="https://raw.githubusercontent.com/asafc64/DockerTUI/refs/heads/master/assets/container_bottom_preview.png"/>
+    <img width="45%" src="https://raw.githubusercontent.com/asafc64/DockerTUI/refs/heads/master/assets/container_side_preview.png"/>
+</div>
 
 ## Features
 
