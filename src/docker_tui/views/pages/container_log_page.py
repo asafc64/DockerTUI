@@ -1,8 +1,6 @@
-﻿from textual import work
-from textual.app import ComposeResult
-from textual.widgets import Log
+﻿from textual.app import ComposeResult
 
-from docker_tui.apis.docker_api import get_container_logs
+from docker_tui.views.components.containers_log import ContainersLog
 from docker_tui.views.pages.page import Page
 
 
@@ -12,21 +10,7 @@ class ContainerLogPage(Page):
         self.container_id = container_id
 
     def compose(self) -> ComposeResult:
-        yield Log()
-
-    def on_mount(self) -> None:
-        super().on_mount()
-        self.loading = True
-        self.load_data()
-
-    @work
-    async def load_data(self) -> None:
-        lines = await get_container_logs(id=self.container_id)
-        log = self.query_one(Log)
-        for line in lines:
-            log.write_line(line)
-        self.loading = False
-        log.focus()
+        yield ContainersLog(container_ids=[self.container_id])
 
     def nav_back(self):
         from docker_tui.views.pages.containers_list_page import ContainersListPage
