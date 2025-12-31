@@ -106,11 +106,18 @@ class ResponsiveTable(Widget):
         if selected_row_index is not None:
             self.table.move_cursor(row=selected_row_index)
 
+    def get_selected_row_index(self) -> int:
+        return self.table.cursor_row
+
     def get_selected_row_key(self) -> str | None:
         if not self._data.rows:
             return None
         selected_key = self._data.rows[self.table.cursor_row].row_key
         return selected_key
+
+    def select_row(self, row_key: str):
+        row_idx = next((i for i, r in enumerate(self.table.rows) if r.value == row_key), 0)
+        self.table.move_cursor(row=row_idx)
 
     def _get_cells_to_insert(self, cells: List[Cell]) -> List[Cell]:
         visible_cells = [cell for cell in cells if cell.col_key in self.visible_columns_keys]

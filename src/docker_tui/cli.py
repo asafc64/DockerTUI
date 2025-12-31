@@ -8,6 +8,7 @@ from docker_tui.services.images_provider import ImagesProvider
 from docker_tui.views.components.header import Header
 from docker_tui.views.modals.search_modal import SearchModal, SearchOption
 from docker_tui.views.pages.container_details_page import ContainerDetailsPage
+from docker_tui.views.pages.container_files_page import ContainerFilesPage
 from docker_tui.views.pages.container_log_page import ContainerLogPage
 from docker_tui.views.pages.containers_list_page import ContainersListPage
 from docker_tui.views.pages.image_list_page import ImageListPage
@@ -74,6 +75,7 @@ class DockerTuiApp(App):
             options.append(SearchOption(c.name, "Container > List", 2, f"goto_container_row_{c.id}", [c.id]))
             options.append(SearchOption(c.name, "Container > Info", 3, f"goto_container_info_{c.id}", [c.id, c.name]))
             options.append(SearchOption(c.name, "Container > Logs", 4, f"goto_container_logs_{c.id}", [c.id, c.name]))
+            options.append(SearchOption(c.name, "Container > Files", 4, f"goto_container_files_{c.id}", [c.id, c.name]))
 
         # Images
         try:
@@ -106,6 +108,11 @@ class DockerTuiApp(App):
             container_id = selected.args[0]
             container_name = selected.args[1]
             self.show_page(ContainerLogPage(container_id=container_id, container_name=container_name))
+
+        if selected.id.startswith("goto_container_files"):
+            container_id = selected.args[0]
+            container_name = selected.args[1]
+            self.show_page(ContainerFilesPage(container_id=container_id, container_name=container_name))
 
         if selected.id.startswith("goto_image_row"):
             image_id = selected.args[0]
