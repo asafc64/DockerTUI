@@ -35,7 +35,8 @@ class ContainersListPage(Page):
 
     BINDINGS = [
         Binding("d", "show_details", "Show Details", group=Binding.Group("Inspect")),
-        Binding("l", "show_logs", "Show logs", group=Binding.Group("Inspect")),
+        Binding("l", "show_logs", "Show Logs", group=Binding.Group("Inspect")),
+        Binding("f", "show_files", "Show Files", group=Binding.Group("Inspect")),
         Binding("e", "exec", "Exec", group=Binding.Group("Inspect")),
         Binding(".", "toggle_preview", "Preview", key_display=".", group=Binding.Group("Inspect")),
         Binding("k", "stop", "Stop", group=Binding.Group("Actions")),
@@ -112,6 +113,13 @@ class ContainersListPage(Page):
         from docker_tui.views.pages.container_log_page import ContainerLogPage
         self.nav_to(page=ContainerLogPage(container_name=self.selected_container.name,
                                           container_id=self.selected_container.id))
+
+    def action_show_files(self):
+        if not self.selected_container:
+            return
+        from docker_tui.views.pages.container_files_page import ContainerFilesPage
+        self.nav_to(page=ContainerFilesPage(container_name=self.selected_container.name,
+                                            container_id=self.selected_container.id))
 
     def action_exec(self):
         if not self.selected_container:

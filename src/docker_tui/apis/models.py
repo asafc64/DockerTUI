@@ -1,4 +1,4 @@
-﻿from datetime import datetime
+﻿from datetime import datetime, UTC
 from typing import List, Dict, Any
 
 from aiodocker.containers import DockerContainer
@@ -53,8 +53,8 @@ class ImageListItem:
     def __init__(self, data: Dict[str, Any]):
         self.name, self.tag = data["RepoTags"][0].split(":", maxsplit=1)
         self.id = data["Id"]
-        self.size = data["Size"] / (1024 * 1024)  # MB
-        self.created_at = datetime.fromtimestamp(data["Created"])
+        self.size = data["Size"]
+        self.created_at = datetime.fromtimestamp(data["Created"], tz=UTC)
 
     @property
     def short_id(self) -> str:
@@ -82,7 +82,7 @@ class DockerHubTag:
             self.digest = data["digest"]
             self.os = data["os"]
             self.variant = data["variant"]
-            self.size = data["size"]  # Bytes
+            self.size = data["size"]
 
         def __str__(self):
             if self.os == "unknown":
