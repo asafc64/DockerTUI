@@ -3,6 +3,7 @@
 from rich.text import Text
 from textual import work, on, events
 from textual.app import ComposeResult
+from textual.reactive import Reactive
 from textual.widgets import DataTable
 
 from docker_tui.services.container_filesystem_explorer import list_container_files, FsEntry
@@ -12,6 +13,8 @@ from docker_tui.views.pages.page import Page
 
 
 class ContainerFilesPage(Page):
+    path: Reactive[str] = Reactive("/")
+
     def __init__(self, container_name: str, container_id: str):
         super().__init__(title=f"Containers > {container_name} > Files")
         self.container_id = container_id
@@ -27,7 +30,6 @@ class ContainerFilesPage(Page):
             ]
         )
         self.files: Dict[str, FsEntry] = {}
-        self.path = "/"
 
     def compose(self) -> ComposeResult:
         yield self.table
@@ -43,17 +45,15 @@ class ContainerFilesPage(Page):
     @on(DataTable.RowSelected)
     def handle_row_selected(self, event: DataTable.RowSelected) -> None:
         file = self.files[event.row_key.value]
-        if file.is_file:
-            return
+        if file.is_directory:
+            self.path = file.path
 
-        self.path = file.path
-        self._populate_table()
+    def watch_path(self, old_value: str, new_value: str):
+        self._populate_table(select_file=old_value)
 
     def _on_key(self, event: events.Key) -> None:
         if event.key == "escape" and not self._is_root():
-            prev_path = self.path
             self.path = self._get_parent_path()
-            self._populate_table(select_file=prev_path)
             event.prevent_default()
             event.stop()
 
