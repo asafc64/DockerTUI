@@ -1,4 +1,6 @@
-﻿from datetime import datetime, UTC
+﻿from dataclasses import dataclass
+from datetime import datetime, UTC
+from enum import Enum
 from typing import List, Dict, Any
 
 from aiodocker.containers import DockerContainer
@@ -114,3 +116,15 @@ class PullingStatus:
         self.id: str | None = data.get("id", None)
         self.status: str = data["status"]
         self.progress_detail = PullingStatus.ProgressDetail(data.get("progressDetail", {}))
+
+
+class ContainerFsChangeKind(Enum):
+    Modified = 0
+    Added = 1
+    Deleted = 2
+
+
+@dataclass
+class ContainerFsChange:
+    kind: ContainerFsChangeKind
+    path: str

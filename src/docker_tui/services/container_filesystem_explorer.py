@@ -7,16 +7,16 @@ from docker_tui.apis.docker_api import exec_container
 
 @dataclass
 class FsEntry:
+    path: str
     mode: str
     user: str
     group: str
     size: int
     modified: datetime
-    path: str
 
     @property
     def name(self) -> str:
-        return self.path.split("/")[-1]
+        return self.get_name(path=self.path)
 
     @property
     def is_directory(self) -> bool:
@@ -26,9 +26,13 @@ class FsEntry:
     def is_file(self) -> bool:
         return not self.is_directory
 
+    @staticmethod
+    def get_name(path: str):
+        return path.split("/")[-1]
+
 
 async def list_container_files(container_id: str, path: str) -> List[FsEntry]:
-    cmd = ["sh", "-c", f"ls {path} 1> /dev/null 2>&1 && stat -c '%A\t%U\t%G\t%s\t%y\t%n' {path}"]
+    cmd = ["sh", "-c", f"stat -c '%A\t%U\t%G\t%s\t%y\t%n' {path}/.[!.]* {path}/* 2>/dev/null"]
     stdout = ""
     entries = []
     async for item in exec_container(id=container_id, cmd=cmd):
@@ -44,7 +48,7 @@ async def list_container_files(container_id: str, path: str) -> List[FsEntry]:
             group=parts[2],
             size=int(parts[3]),
             modified=_parse_datetime(parts[4]),
-            path=parts[5]
+            path=parts[5].replace("//", "/")
         )
         entries.append(entry)
         print(line)
