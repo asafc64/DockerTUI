@@ -1,6 +1,4 @@
-﻿from dataclasses import dataclass
-from datetime import datetime
-from typing import Dict, List
+﻿from typing import Dict
 
 from rich.text import Text
 from textual import work, on, events
@@ -15,18 +13,6 @@ from docker_tui.utils.formating import file_size, ago
 from docker_tui.utils.input_helpers import TypeAhead
 from docker_tui.views.components.responsive_table import ResponsiveTable, ColumnDefinition, Data, Row, Cell
 from docker_tui.views.pages.page import Page
-
-
-@dataclass
-class FsViewModel:
-    name: str
-    path: str
-    is_file: bool
-    mode: str | None = None
-    user: str | None = None
-    group: str | None = None
-    size: int = 0
-    modified: datetime | None = None
 
 
 class ContainerFilesPage(Page):
@@ -123,40 +109,41 @@ class ContainerFilesPage(Page):
             self.notify(title="Failed to list files", message=str(ex), severity="error")
             return
 
-        view_models: List[FsViewModel] = []
-        for entry in entries:
-            view_models.append(FsViewModel(name=entry.name, path=entry.path, mode=entry.mode, user=entry.user,
-                                           group=entry.group, size=entry.size, modified=entry.modified,
-                                           is_file=entry.is_file))
-
-        deleted_paths = [path
-                         for path, kind in self.changes.items()
-                         if self._get_parent_path(path) == self.path and kind == ContainerFsChangeKind.Deleted]
-        for path in deleted_paths:
-            view_models.append(FsViewModel(name=FsEntry.get_name(path=path), is_file=True, path=path))
-
-        view_models = sorted(view_models, key=lambda e: e.name)
-
         data = Data(rows=[])
-        for item in view_models:
+
+        for entry in entries:
             data.rows.append(Row(
                 cells=[
-                    Cell("mode", Text(item.mode or "---")),
-                    Cell("name", Text(item.name)),
-                    Cell("tag", self._get_tag(item)),
-                    Cell("size", Text(file_size(item.size)) if item.is_file else Text("")),
-                    Cell("modified", Text(ago(item.modified) if item.modified else "---")),
-                    Cell("user", Text(item.user or "---")),
-                    Cell("group", Text(item.group or "---"))
+                    Cell("mode", Text(entry.mode)),
+                    Cell("name", Text(entry.name)),
+                    Cell("tag", self._get_tag(entry.path)),
+                    Cell("size", Text(file_size(entry.size)) if entry.is_file else Text("")),
+                    Cell("modified", Text(ago(entry.modified))),
+                    Cell("user", Text(entry.user)),
+                    Cell("group", Text(entry.group))
                 ],
-                row_key=item.path,
-                selected=select_file == item.path
+                row_key=entry.path,
+                selected=select_file == entry.path
             ))
+
+        for path, kind in self.changes.items():
+            if self._get_parent_path(path) == self.path and kind == ContainerFsChangeKind.Deleted:
+                data.rows.append(Row(
+                    cells=[
+                        Cell("mode", Text("---")),
+                        Cell("name", Text(FsEntry.get_name(path=path))),
+                        Cell("tag", self._get_tag(path))
+                    ],
+                    row_key=path
+                ))
+
+        data.rows = sorted(data.rows, key=lambda e: e.row_key)
+
         self.table.update_table(data=data)
         self.table.loading = False
 
-    def _get_tag(self, f: FsViewModel) -> Text:
-        change = self.changes.get(f.path, None)
+    def _get_tag(self, path: str) -> Text:
+        change = self.changes.get(path, None)
         if change == ContainerFsChangeKind.Added:
             return Text("Added", style="green")
         if change == ContainerFsChangeKind.Modified:
