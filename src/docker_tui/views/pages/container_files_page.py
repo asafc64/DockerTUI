@@ -145,9 +145,17 @@ class ContainerFilesPage(Page):
         self.table.loading = False
 
     def _get_tag(self, path: str) -> Text:
-        is_volume = path in self.volumes
-        if is_volume:
+        # folder is mapped to volume
+        if any((v == path for v in self.volumes)):
             return Text("Volume", style="purple")
+
+        # contains folder that is mapped to volume
+        if any((v.startswith(path) for v in self.volumes)):
+            return Text("Contains Volume", style="purple")
+
+        # folder is inside a mapped volume
+        if any((path.startswith(v) for v in self.volumes)):
+            return Text("Inside Volume", style="purple")
 
         change = self.changes.get(path, None)
         if change == ContainerFsChangeKind.Added:
