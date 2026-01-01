@@ -1,4 +1,4 @@
-﻿from typing import Dict
+﻿from typing import Dict, List
 
 from rich.text import Text
 from textual import work, on, events
@@ -6,7 +6,7 @@ from textual.app import ComposeResult
 from textual.reactive import Reactive
 from textual.widgets import DataTable, Label
 
-from docker_tui.apis.docker_api import get_container_changes
+from docker_tui.apis.docker_api import get_container_changes, get_container_details
 from docker_tui.apis.models import ContainerFsChangeKind
 from docker_tui.services.container_filesystem_explorer import list_container_files, FsEntry
 from docker_tui.utils.formating import file_size, ago
@@ -45,6 +45,7 @@ class ContainerFilesPage(Page):
             ]
         )
         self.changes: Dict[str, ContainerFsChangeKind] | None = None
+        self.volumes: List[str] | None = None
         self.files: Dict[str, FsEntry] = {}
         self.type_ahead = TypeAhead()
 
@@ -101,6 +102,7 @@ class ContainerFilesPage(Page):
         self.table.loading = True
         try:
             await self._fetch_changes_if_needed()
+            await self._fetch_volumes_if_needed()
             entries = await list_container_files(container_id=self.container_id,
                                                  path=self.path)
             self.files = {e.path: e for e in entries}
@@ -143,6 +145,10 @@ class ContainerFilesPage(Page):
         self.table.loading = False
 
     def _get_tag(self, path: str) -> Text:
+        is_volume = path in self.volumes
+        if is_volume:
+            return Text("Volume", style="purple")
+
         change = self.changes.get(path, None)
         if change == ContainerFsChangeKind.Added:
             return Text("Added", style="green")
@@ -157,3 +163,8 @@ class ContainerFilesPage(Page):
         if self.changes is None:
             changes = await get_container_changes(id=self.container_id)
             self.changes = {c.path: c.kind for c in changes}
+
+    async def _fetch_volumes_if_needed(self):
+        if self.volumes is None:
+            details = await get_container_details(id=self.container_id)
+            self.volumes = details.volumes
