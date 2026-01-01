@@ -1,6 +1,5 @@
 ﻿from dataclasses import dataclass
 
-from ago import human
 from aiodocker import DockerError
 from rich.text import Text
 from textual import work
@@ -10,6 +9,7 @@ from textual.binding import Binding
 from docker_tui.apis.docker_api import delete_image
 from docker_tui.services.containers_stats_monitor import ContainersStatsMonitor
 from docker_tui.services.images_provider import ImagesProvider
+from docker_tui.utils.formating import ago, file_size
 from docker_tui.views.components.responsive_table import ResponsiveTable, ColumnDefinition, Data, Row, Cell
 from docker_tui.views.modals.action_verification_modal import ActionVerificationModal
 from docker_tui.views.modals.dockerhub_search_modal import DockerhubSearchModal
@@ -114,8 +114,8 @@ class ImageListPage(Page):
                 Cell("name", Text(image.name)),
                 Cell("tag", Text(image.tag)),
                 Cell("id", Text(image.short_id)),
-                Cell("created_at", Text(human(image.created_at, precision=1))),
-                Cell("size", Text(f"{image.size:.2f} MB"))
+                Cell("created_at", Text(ago(image.created_at))),
+                Cell("size", Text(file_size(image.size)))
             ]
             data.rows.append(Row(cells=cells, row_key=f"{image.id};{image.name}", selected=selected))
 

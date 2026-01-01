@@ -1,4 +1,6 @@
-﻿from datetime import datetime
+﻿from dataclasses import dataclass
+from datetime import datetime, UTC
+from enum import Enum
 from typing import List, Dict, Any
 
 from aiodocker.containers import DockerContainer
@@ -53,8 +55,8 @@ class ImageListItem:
     def __init__(self, data: Dict[str, Any]):
         self.name, self.tag = data["RepoTags"][0].split(":", maxsplit=1)
         self.id = data["Id"]
-        self.size = data["Size"] / (1024 * 1024)  # MB
-        self.created_at = datetime.fromtimestamp(data["Created"])
+        self.size = data["Size"]
+        self.created_at = datetime.fromtimestamp(data["Created"], tz=UTC)
 
     @property
     def short_id(self) -> str:
@@ -82,7 +84,7 @@ class DockerHubTag:
             self.digest = data["digest"]
             self.os = data["os"]
             self.variant = data["variant"]
-            self.size = data["size"]  # Bytes
+            self.size = data["size"]
 
         def __str__(self):
             if self.os == "unknown":
@@ -114,3 +116,15 @@ class PullingStatus:
         self.id: str | None = data.get("id", None)
         self.status: str = data["status"]
         self.progress_detail = PullingStatus.ProgressDetail(data.get("progressDetail", {}))
+
+
+class ContainerFsChangeKind(Enum):
+    Modified = 0
+    Added = 1
+    Deleted = 2
+
+
+@dataclass
+class ContainerFsChange:
+    kind: ContainerFsChangeKind
+    path: str

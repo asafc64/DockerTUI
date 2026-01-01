@@ -1,11 +1,11 @@
-﻿from ago import human
-from textual import work
+﻿from textual import work
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Container, Vertical
 from textual.widgets import Label, Link
 
 from docker_tui.apis.docker_api import get_container_details
+from docker_tui.utils.formating import ago
 from docker_tui.views.components.container_cpu_usage_plot import ContainerCpuUsagePlot
 from docker_tui.views.components.container_memory_usage_plot import ContainerMemoryUsagePlot
 from docker_tui.views.pages.page import Page
@@ -85,7 +85,7 @@ class ContainerDetailsPage(Page):
     @work
     async def load_data(self) -> None:
         data = await get_container_details(id=self.container_id)
-        self.query_one("#status", Label).update(f"{data.status} ({human(data.status_at, precision=1)})")
+        self.query_one("#status", Label).update(f"{data.status} ({ago(data.status_at)})")
         await self.query_one("#ports", Vertical).mount(
             *[Link(f"{p[0]}/{p[1]}", url=f"http://localhost:{p[1]}") for p in data.ports])
         self.query_one("#image", Label).update(data.image)

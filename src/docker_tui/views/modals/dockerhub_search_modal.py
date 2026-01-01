@@ -2,7 +2,6 @@
 from dataclasses import dataclass
 from typing import List, TypeVar, Generic
 
-from ago import human
 from aiodocker import DockerError
 from textual import on, work
 from textual.app import ComposeResult
@@ -18,6 +17,7 @@ from textual.widgets import Input, ListView, Label, ListItem, ContentSwitcher, P
 from docker_tui.apis.docker_api import pull_image
 from docker_tui.apis.dockerhub_api import search_repo, search_tags
 from docker_tui.apis.models import DockerHubRepo, DockerHubTag, PullingStatus
+from docker_tui.utils.formating import ago
 from docker_tui.views.components.debounced_input_handler import DebouncedInputHandler
 
 SearchResultType = TypeVar("SearchResultType")
@@ -206,7 +206,7 @@ class TagSelectionStep(SearchPanel[DockerHubTag]):
     def render_item(self, data: DockerHubTag) -> ListItem:
         row = Container(
             Label(data.name),
-            Label(human(data.last_updated, precision=1, abbreviate=True)),
+            Label(ago(data.last_updated)),
             Label(" · ".join([str(i) for i in data.images if str(i)]), classes="arc"),
             classes="row")
         return ListItem(row)

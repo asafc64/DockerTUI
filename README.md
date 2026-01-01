@@ -14,7 +14,7 @@ and based on [Textual](https://github.com/Textualize/textual).
 ## Features
 
 - Quick search-and-navigate to anywhere in the app.
-- Container views: list, logs, details, and stats.
+- Container views: list, logs, files, details, and stats.
 - Container actions: exec, stop, restart, delete.
 - Image views: list.
 - Image actions: delete, easy-pull wizard.

@@ -1,8 +1,10 @@
-﻿from typing import List, AsyncGenerator
+﻿from typing import List, AsyncGenerator, Sequence
 
 import aiodocker
+from aiohttp import ClientTimeout
 
-from docker_tui.apis.models import Container, ContainerDetails, ImageListItem, PullingStatus, Version
+from docker_tui.apis.models import Container, ContainerDetails, ImageListItem, PullingStatus, Version, \
+    ContainerFsChange, ContainerFsChangeKind
 
 
 async def get_version() -> Version:
@@ -30,6 +32,25 @@ async def get_container_logs(id: str) -> AsyncGenerator[str, None]:
         stream = container.log(stdout=True, stderr=True, timestamps=True, follow=True)
         async for line in stream:
             yield line
+
+
+async def get_container_changes(id: str) -> List[ContainerFsChange]:
+    async with aiodocker.Docker() as docker:
+        data = await docker._query_json(f"containers/{id}/changes", method="GET")
+        changes = [ContainerFsChange(kind=ContainerFsChangeKind(i["Kind"]), path=i["Path"]) for i in data]
+        return changes
+
+
+async def exec_container(id: str, cmd: str | Sequence[str]) -> AsyncGenerator[str, None]:
+    async with aiodocker.Docker() as docker:
+        container = await docker.containers.get(container_id=id)
+        c_exec = await container.exec(cmd=cmd)
+        async with c_exec.start(timeout=ClientTimeout(1)) as stream:
+            while True:
+                msg = await stream.read_out()
+                if msg is None:
+                    break
+                yield msg.data.decode()
 
 
 async def stop_container(id: str):
