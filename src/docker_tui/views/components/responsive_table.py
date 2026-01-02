@@ -8,6 +8,8 @@ from textual.layouts.horizontal import HorizontalLayout
 from textual.widget import Widget
 from textual.widgets import Static, DataTable
 
+from docker_tui.utils.input_helpers import TypeAhead
+
 
 @dataclass
 class ColumnDefinition:
@@ -28,6 +30,7 @@ class Cell:
 class Row:
     cells: List[Cell]
     row_key: str
+    type_ahead: str
     selected: bool = False
 
 
@@ -68,6 +71,7 @@ class ResponsiveTable(Widget):
         self.columns = columns
         self.visible_columns_keys: List[str] = []
         self.table = DataTable(id="inner-table", cursor_type='row')
+        self.type_ahead = TypeAhead()
 
     def compose(self) -> ComposeResult:
         yield self.table
@@ -80,6 +84,22 @@ class ResponsiveTable(Widget):
 
     def _on_focus(self, event: events.Focus) -> None:
         self.table.focus()
+
+    def on_key(self, event: events.Key) -> None:
+        def row_match(row: Row, txt: str) -> bool:
+            return row.type_ahead and row.type_ahead.lower().startswith(txt.lower())
+
+        if not event.character:
+            return
+
+        sequence = self.type_ahead.register_key_press(key=event.character)
+
+        from_idx = self.table.cursor_row + 1
+        reordered_rows = self._data.rows[from_idx:] + self._data.rows[:from_idx]
+
+        next_match_row_key = next((r.row_key for r in reordered_rows if row_match(r, sequence)), None)
+        if next_match_row_key:
+            self.select_row(row_key=next_match_row_key)
 
     def update_table(self, data: Data):
         self._data = data
@@ -116,7 +136,7 @@ class ResponsiveTable(Widget):
         return selected_key
 
     def select_row(self, row_key: str):
-        row_idx = next((i for i, r in enumerate(self.table.rows) if r.value == row_key), 0)
+        row_idx = self.table.get_row_index(row_key=row_key)
         self.table.move_cursor(row=row_idx)
 
     def _get_cells_to_insert(self, cells: List[Cell]) -> List[Cell]:

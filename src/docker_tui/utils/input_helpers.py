@@ -2,14 +2,14 @@
 from dataclasses import dataclass
 
 
-class MouseInputHelper:
+class DoubleClickDetector:
     _last_click_time = 0
 
     @staticmethod
     def is_double_click() -> bool:
         now = time.time()
-        last_one = MouseInputHelper._last_click_time
-        MouseInputHelper._last_click_time = now
+        last_one = DoubleClickDetector._last_click_time
+        DoubleClickDetector._last_click_time = now
         return now - last_one <= 0.4
 
 
@@ -25,7 +25,7 @@ class TypeAhead:
         self._type_buffer = ""
         self._last_key_time = None
 
-    def register_key_press(self, key: str) -> TypeAheadResult:
+    def register_key_press(self, key: str) -> str:
         now = time.time()
 
         # reset buffer if more than 1/2 second passed
@@ -35,8 +35,7 @@ class TypeAhead:
         self._last_key_time = now
 
         # handle cycling
-        if self._type_buffer == key:
-            return TypeAheadResult(typed_keys=self._type_buffer, is_repeated_single_key=True)
+        if self._type_buffer != key:
+            self._type_buffer += key
 
-        self._type_buffer += key
-        return TypeAheadResult(typed_keys=self._type_buffer, is_repeated_single_key=False)
+        return self._type_buffer

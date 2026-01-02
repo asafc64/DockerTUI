@@ -37,7 +37,7 @@ async def get_container_logs(id: str) -> AsyncGenerator[str, None]:
 async def get_container_changes(id: str) -> List[ContainerFsChange]:
     async with aiodocker.Docker() as docker:
         data = await docker._query_json(f"containers/{id}/changes", method="GET")
-        changes = [ContainerFsChange(kind=ContainerFsChangeKind(i["Kind"]), path=i["Path"]) for i in data]
+        changes = [ContainerFsChange(kind=ContainerFsChangeKind(i["Kind"]), path=i["Path"]) for i in data or []]
         return changes
 
 

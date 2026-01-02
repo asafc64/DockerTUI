@@ -10,7 +10,6 @@ from docker_tui.apis.docker_api import get_container_changes, get_container_deta
 from docker_tui.apis.models import ContainerFsChangeKind
 from docker_tui.services.container_filesystem_explorer import list_container_files, FsEntry
 from docker_tui.utils.formating import file_size, ago
-from docker_tui.utils.input_helpers import TypeAhead
 from docker_tui.views.components.responsive_table import ResponsiveTable, ColumnDefinition, Data, Row, Cell
 from docker_tui.views.pages.page import Page
 
@@ -47,7 +46,6 @@ class ContainerFilesPage(Page):
         self.changes: Dict[str, ContainerFsChangeKind] | None = None
         self.volumes: List[str] | None = None
         self.files: Dict[str, FsEntry] = {}
-        self.type_ahead = TypeAhead()
 
     def compose(self) -> ComposeResult:
         yield self.path_label
@@ -76,18 +74,6 @@ class ContainerFilesPage(Page):
             self.path = self._get_parent_path(self.path)
             event.prevent_default()
             event.stop()
-            return
-
-        if event.character:
-            result = self.type_ahead.register_key_press(key=event.character)
-
-            items = list(self.files.values())
-            from_idx = self.table.get_selected_row_index() + 1
-            ordered_items = items[from_idx:] + items[:from_idx]
-
-            next_match = next((f.path for f in ordered_items if f.name.startswith(result.typed_keys)), None)
-            if next_match:
-                self.table.select_row(row_key=next_match)
 
     def _is_root(self):
         return self.path == "/"
@@ -125,18 +111,21 @@ class ContainerFilesPage(Page):
                     Cell("group", Text(entry.group))
                 ],
                 row_key=entry.path,
+                type_ahead=entry.name,
                 selected=select_file == entry.path
             ))
 
         for path, kind in self.changes.items():
             if self._get_parent_path(path) == self.path and kind == ContainerFsChangeKind.Deleted:
+                name = FsEntry.get_name(path=path)
                 data.rows.append(Row(
                     cells=[
                         Cell("mode", Text("---")),
-                        Cell("name", Text(FsEntry.get_name(path=path))),
+                        Cell("name", Text(name)),
                         Cell("tag", self._get_tag(path))
                     ],
-                    row_key=path
+                    row_key=path,
+                    type_ahead=name
                 ))
 
         data.rows = sorted(data.rows, key=lambda e: e.row_key)
