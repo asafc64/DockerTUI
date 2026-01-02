@@ -128,3 +128,10 @@ class ContainerFsChangeKind(Enum):
 class ContainerFsChange:
     kind: ContainerFsChangeKind
     path: str
+
+
+@dataclass
+class ExecResult:
+    stdout: str
+    stderr: str
+    exit_code: int
