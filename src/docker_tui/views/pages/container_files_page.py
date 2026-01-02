@@ -3,12 +3,15 @@
 from rich.text import Text
 from textual import work, on, events
 from textual.app import ComposeResult
+from textual.binding import Binding
 from textual.reactive import Reactive
 from textual.widgets import DataTable, Label
 
 from docker_tui.apis.docker_api import get_container_changes, get_container_details
 from docker_tui.apis.models import ContainerFsChangeKind
-from docker_tui.services.container_filesystem_explorer import list_container_files, FsEntry
+from docker_tui.services.container_filesystem_explorer import list_container_files, FsEntry, read_container_file, \
+    write_container_file
+from docker_tui.utils.external_files_editor import edit_text
 from docker_tui.utils.formating import file_size, ago
 from docker_tui.views.components.responsive_table import ResponsiveTable, ColumnDefinition, Data, Row, Cell
 from docker_tui.views.pages.page import Page
@@ -24,6 +27,10 @@ class ContainerFilesPage(Page):
             text-style: bold;
         }
     """
+
+    BINDINGS = [
+        Binding("f2", "edit_file", "Edit", group=Binding.Group("Actions"))
+    ]
 
     path: Reactive[str] = Reactive("/")
 
@@ -65,11 +72,21 @@ class ContainerFilesPage(Page):
         if file.is_directory:
             self.path = file.path
 
+    @work()
+    async def action_edit_file(self):
+        file = self.files[self.table.get_selected_row_key()]
+        file_bytes = await read_container_file(container_id=self.container_id, path=file.path)
+        new_txt = edit_text(file_bytes.decode(), file.name)
+        new_file_bytes = new_txt.encode()
+        if new_file_bytes != file_bytes:
+            await write_container_file(container_id=self.container_id, path=file.path, content=new_file_bytes)
+            self.notify("File Saved")
+
     def watch_path(self, old_value: str, new_value: str):
         self.path_label.update(new_value)
         self._populate_table(select_file=old_value)
 
-    def _on_key(self, event: events.Key) -> None:
+    def on_key(self, event: events.Key) -> None:
         if (event.key == "escape" or event.key == "backspace") and not self._is_root():
             self.path = self._get_parent_path(self.path)
             event.prevent_default()
