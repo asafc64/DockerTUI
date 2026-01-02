@@ -13,12 +13,47 @@ and based on [Textual](https://github.com/Textualize/textual).
 
 ## Features
 
-- Quick search-and-navigate to anywhere in the app.
-- Container views: list, logs, files, details, and stats.
-- Container actions: exec, stop, restart, delete.
-- Image views: list.
-- Image actions: delete, easy-pull wizard.
-- All lists support Type-to-select (similar to file browser) for quick navigation to an item by typing its name.
+### Global Navigation
+
+- **Quick search and navigation**</br>
+  Jump to any view or resource in the application using keyboard-based navigation.
+
+- **Type-to-select lists**</br>
+  All lists support incremental type-to-select (similar to file browsers), allowing quick navigation by typing an item’s
+  name.
+
+### Containers
+
+- **Container list view**</br>
+  Displays containers grouped by project, showing relevant information such as status, image, CPU usage, and memory
+  usage.
+
+- **Container logs view**</br>
+  Displays logs at the project level, allowing multiple container logs to be viewed simultaneously.
+
+- **Container files view**</br>
+  Presents a filesystem view similar to ls, showing added, modified, and deleted files, with clear indication of mounted
+  volumes.
+
+- **Container details and stats view**</br>
+  Combines container configuration details with runtime statistics, including CPU and memory usage.
+
+- **Execute commands (exec)**</br>
+  Run commands or open an interactive shell inside a running container.
+
+- **Lifecycle actions**</br>
+  Stop, restart, or delete containers directly from the interface.
+
+### Images
+
+- **Image list view**</br>
+  Lists all local Docker images along with relevant metadata.
+
+- **Image deletion**</br>
+  Remove unused or unwanted images.
+
+- **Image pull wizard**</br>
+  Pull images using a guided, interactive workflow for selecting repositories and tags.
 
 ## 2-Steps to get it running
 
