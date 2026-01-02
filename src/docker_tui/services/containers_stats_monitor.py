@@ -1,7 +1,7 @@
 ﻿from collections import deque
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import List, Dict
+from typing import List, Dict, TypeVar, Generic
 
 import aiodocker
 
@@ -10,18 +10,20 @@ from docker_tui.apis.models import Container
 from docker_tui.utils.async_background import AsyncBackground
 from docker_tui.utils.async_background_loop import AsyncBackgroundLoop
 
+DataPointValueType = TypeVar("DataPointValueType")
+
 
 @dataclass
-class DataPoint:
+class DataPoint(Generic[DataPointValueType]):
     timestamp: datetime
-    value: float
+    value: DataPointValueType
 
 
 @dataclass
 class ContainerStats:
     container_id: str
-    cpu_usage: List[DataPoint]
-    memory_usage: List[DataPoint]
+    cpu_usage: List[DataPoint[float]]
+    memory_usage: List[DataPoint[int]]
 
 
 class ContainersStatsMonitor(AsyncBackgroundLoop):
@@ -138,7 +140,7 @@ class ContainerStatsListener(AsyncBackground):
                 print(str(ex))
 
     @staticmethod
-    def _calc_cpu_percent(prev, curr):
+    def _calc_cpu_percent(prev, curr) -> float:
         if curr["cpu_stats"]["cpu_usage"]["total_usage"] == 0 or \
                 "system_cpu_usage" not in prev["cpu_stats"]:
             return 0.0
@@ -156,7 +158,7 @@ class ContainerStatsListener(AsyncBackground):
         return 0.0
 
     @staticmethod
-    def _calc_memory_usage(stats) -> float:
+    def _calc_memory_usage(stats) -> int:
         if stats['memory_stats']:
-            return stats['memory_stats']['usage'] / (1024 * 1024)
+            return stats['memory_stats']['usage']
         return 0.0
