@@ -117,7 +117,7 @@ class ImageListPage(Page):
                 Cell("created_at", Text(ago(image.created_at))),
                 Cell("size", Text(file_size(image.size)))
             ]
-            data.rows.append(Row(cells=cells, row_key=f"{image.id};{image.name}", type_ahead=image.name,
+            data.rows.append(Row(cells=cells, row_key=f"{image.id};{image.name}", type_to_select=image.name,
                                  selected=selected))
 
         self.table.update_table(data=data)

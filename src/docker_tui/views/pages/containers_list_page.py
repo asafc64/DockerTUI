@@ -254,7 +254,7 @@ class ContainersListPage(Page):
                 cells = self._build_project_row(name=project_name, containers=project_containers)
                 grouped = True
                 data.rows.append(Row(cells=cells, row_key=self.PROJECT_ROW_KEY_PREFIX + project_name,
-                                     type_ahead=project_name))
+                                     type_to_select=project_name))
 
             for i, c in enumerate(project_containers):
                 row_key = f"{c.id};{c.name}"
@@ -262,7 +262,8 @@ class ContainersListPage(Page):
                 stats = containers_stats.get(c.id)
                 cells = self._build_container_row(c=c, s=stats, is_grouped=grouped,
                                                   is_last_in_group=(i == len(project_containers) - 1))
-                data.rows.append(Row(cells=cells, row_key=row_key, type_ahead=c.service or c.name, selected=selected))
+                data.rows.append(
+                    Row(cells=cells, row_key=row_key, type_to_select=c.service or c.name, selected=selected))
 
         self.table.update_table(data=data)
         self.table.focus()

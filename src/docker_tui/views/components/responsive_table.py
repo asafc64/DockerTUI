@@ -8,7 +8,7 @@ from textual.layouts.horizontal import HorizontalLayout
 from textual.widget import Widget
 from textual.widgets import Static, DataTable
 
-from docker_tui.utils.input_helpers import TypeAhead
+from docker_tui.utils.input_helpers import TypeToSelect
 
 
 @dataclass
@@ -30,7 +30,7 @@ class Cell:
 class Row:
     cells: List[Cell]
     row_key: str
-    type_ahead: str
+    type_to_select: str
     selected: bool = False
 
 
@@ -71,7 +71,7 @@ class ResponsiveTable(Widget):
         self.columns = columns
         self.visible_columns_keys: List[str] = []
         self.table = DataTable(id="inner-table", cursor_type='row')
-        self.type_ahead = TypeAhead()
+        self.type_to_select = TypeToSelect()
 
     def compose(self) -> ComposeResult:
         yield self.table
@@ -87,12 +87,12 @@ class ResponsiveTable(Widget):
 
     def on_key(self, event: events.Key) -> None:
         def row_match(row: Row, txt: str) -> bool:
-            return row.type_ahead and row.type_ahead.lower().startswith(txt.lower())
+            return row.type_to_select and row.type_to_select.lower().startswith(txt.lower())
 
         if not event.character:
             return
 
-        sequence = self.type_ahead.register_key_press(key=event.character)
+        sequence = self.type_to_select.register_key_press(key=event.character)
 
         from_idx = self.table.cursor_row + 1
         reordered_rows = self._data.rows[from_idx:] + self._data.rows[:from_idx]

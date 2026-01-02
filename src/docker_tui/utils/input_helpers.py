@@ -1,5 +1,4 @@
 ﻿import time
-from dataclasses import dataclass
 
 
 class DoubleClickDetector:
@@ -13,13 +12,7 @@ class DoubleClickDetector:
         return now - last_one <= 0.4
 
 
-@dataclass
-class TypeAheadResult:
-    typed_keys: str
-    is_repeated_single_key: bool
-
-
-class TypeAhead:
+class TypeToSelect:
 
     def __init__(self):
         self._type_buffer = ""

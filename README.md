@@ -18,6 +18,7 @@ and based on [Textual](https://github.com/Textualize/textual).
 - Container actions: exec, stop, restart, delete.
 - Image views: list.
 - Image actions: delete, easy-pull wizard.
+- All lists support Type-to-select (similar to file browser) for quick navigation to an item by typing its name.
 
 ## 2-Steps to get it running
 
