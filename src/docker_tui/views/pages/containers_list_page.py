@@ -14,11 +14,11 @@ from textual.widgets import DataTable
 from docker_tui.apis.docker_api import stop_container, restart_container, delete_container
 from docker_tui.apis.models import Container
 from docker_tui.services.containers_stats_monitor import ContainersStatsMonitor, ContainerStats
-from docker_tui.utils.input_helpers import MouseInputHelper
 from docker_tui.views.components.containers_log import ContainersLog
 from docker_tui.views.components.dual_pane_container import DualPaneContainer, PaneLayout
 from docker_tui.views.components.responsive_table import ResponsiveTable, ColumnDefinition, Data, Row, Cell
 from docker_tui.views.modals.action_verification_modal import ActionVerificationModal
+from docker_tui.views.modals.menu_modal import MenuModal, MenuItem
 from docker_tui.views.pages.page import Page
 
 
@@ -34,13 +34,10 @@ class ContainersListPage(Page):
         key: str
 
     BINDINGS = [
-        Binding("d", "show_details", "Show Details", group=Binding.Group("Inspect")),
-        Binding("l", "show_logs", "Show Logs", group=Binding.Group("Inspect")),
-        Binding("f", "show_files", "Show Files", group=Binding.Group("Inspect")),
-        Binding("e", "exec", "Exec", group=Binding.Group("Inspect")),
+        Binding("mock", "show", "Show", key_display="⏎", group=Binding.Group("Inspect")),
         Binding(".", "toggle_preview", "Preview", key_display=".", group=Binding.Group("Inspect")),
-        Binding("k", "stop", "Stop", group=Binding.Group("Actions")),
-        Binding("r", "restart", "Restart", group=Binding.Group("Actions")),
+        Binding("f4", "stop", "Stop", group=Binding.Group("Actions")),
+        Binding("f5", "restart", "Restart", group=Binding.Group("Actions")),
         Binding("delete", "delete", "Delete", group=Binding.Group("Actions")),
     ]
 
@@ -96,6 +93,9 @@ class ContainersListPage(Page):
         if selected_key and selected_key.startswith(self.PROJECT_ROW_KEY_PREFIX):
             return selected_key.lstrip(self.PROJECT_ROW_KEY_PREFIX)
         return None
+
+    def action_show(self):
+        pass
 
     def action_toggle_preview(self):
         self.query_one(DualPaneContainer).toggle_pages_layout()
@@ -180,17 +180,26 @@ class ContainersListPage(Page):
         self.refresh_table_data()
 
     @on(DataTable.RowSelected)
-    def handle_row_selected(self, event: DataTable.RowSelected) -> None:
+    @work()
+    async def handle_row_selected(self, event: DataTable.RowSelected) -> None:
         container = self.selected_container
         if not container:
             return
 
-        if not MouseInputHelper.is_double_click():
-            return
-
-        from docker_tui.views.pages.container_details_page import ContainerDetailsPage
-        self.nav_to(page=ContainerDetailsPage(container_name=container.name,
-                                              container_id=container.id))
+        action = await self.app.push_screen_wait(MenuModal([
+            MenuItem("logs", "Show [underline]L[/underline]ogs", "L"),
+            MenuItem("files", "Show [underline]F[/underline]iles", "F"),
+            MenuItem("details", "Show [underline]D[/underline]etails", "D"),
+            MenuItem("exec", "Run [underline]E[/underline]xec", "E"),
+        ]))
+        if action == "logs":
+            self.action_show_logs()
+        if action == "files":
+            self.action_show_files()
+        if action == "details":
+            self.action_show_details()
+        if action == "exec":
+            self.action_exec()
 
     @on(DataTable.RowHighlighted)
     def handle_row_highlighted(self, event: DataTable.RowHighlighted) -> None:
@@ -244,7 +253,8 @@ class ContainersListPage(Page):
             if project_name:
                 cells = self._build_project_row(name=project_name, containers=project_containers)
                 grouped = True
-                data.rows.append(Row(cells=cells, row_key=self.PROJECT_ROW_KEY_PREFIX + project_name))
+                data.rows.append(Row(cells=cells, row_key=self.PROJECT_ROW_KEY_PREFIX + project_name,
+                                     type_to_select=project_name))
 
             for i, c in enumerate(project_containers):
                 row_key = f"{c.id};{c.name}"
@@ -252,7 +262,8 @@ class ContainersListPage(Page):
                 stats = containers_stats.get(c.id)
                 cells = self._build_container_row(c=c, s=stats, is_grouped=grouped,
                                                   is_last_in_group=(i == len(project_containers) - 1))
-                data.rows.append(Row(cells=cells, row_key=row_key, selected=selected))
+                data.rows.append(
+                    Row(cells=cells, row_key=row_key, type_to_select=c.service or c.name, selected=selected))
 
         self.table.update_table(data=data)
         self.table.focus()

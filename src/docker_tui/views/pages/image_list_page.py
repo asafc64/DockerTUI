@@ -23,7 +23,7 @@ class ImageListPage(Page):
         name: str
 
     BINDINGS = [
-        Binding("p", "pull", "Pull", group=Binding.Group("Actions")),
+        Binding("f1", "pull", "Pull", group=Binding.Group("Actions")),
         Binding("delete", "delete", "Delete", group=Binding.Group("Actions")),
     ]
 
@@ -117,7 +117,8 @@ class ImageListPage(Page):
                 Cell("created_at", Text(ago(image.created_at))),
                 Cell("size", Text(file_size(image.size)))
             ]
-            data.rows.append(Row(cells=cells, row_key=f"{image.id};{image.name}", selected=selected))
+            data.rows.append(Row(cells=cells, row_key=f"{image.id};{image.name}", type_to_select=image.name,
+                                 selected=selected))
 
         self.table.update_table(data=data)
         self.table.focus()

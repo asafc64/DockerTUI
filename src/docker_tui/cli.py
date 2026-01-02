@@ -5,6 +5,7 @@ from textual.containers import Container
 
 from docker_tui.services.containers_stats_monitor import ContainersStatsMonitor
 from docker_tui.services.images_provider import ImagesProvider
+from docker_tui.utils.input_helpers import DoubleClickDetector
 from docker_tui.views.components.header import Header
 from docker_tui.views.modals.search_modal import SearchModal, SearchOption
 from docker_tui.views.pages.container_details_page import ContainerDetailsPage
@@ -26,7 +27,6 @@ class DockerTuiApp(App):
     """
 
     BINDINGS = [
-        Binding("q", "quit", "Quit", group=Binding.Group("Navigation")),
         Binding("escape", "back", "Back", group=Binding.Group("Navigation")),
         Binding("/", "navigate", "Navigate", key_display="/", group=Binding.Group("Navigation")),
     ]
@@ -34,6 +34,7 @@ class DockerTuiApp(App):
     def __init__(self):
         super().__init__()
         self.current_page: Page = None
+        self.ecs_clicker = DoubleClickDetector()
 
     async def on_mount(self):
         self.show_page(page=ContainersListPage())
@@ -54,7 +55,11 @@ class DockerTuiApp(App):
 
     def action_back(self):
         if self.current_page.is_root_page:
-            self.action_help_quit()
+            if self.ecs_clicker.is_double_click():
+                self.exit()
+            else:
+                self.notify("Press [b]Escape[/b] twice (or [b]ctrl+q[/b]) quit the app", title="Do you want to quit?")
+            # self.action_help_quit()
         else:
             self.current_page.nav_back()
 
