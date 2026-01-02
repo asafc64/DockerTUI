@@ -7,7 +7,7 @@ from docker_tui.views.components.time_series_plot import TimeSeriesPlot
 
 class ContainerMemoryUsagePlot(TimeSeriesPlot):
 
-    def __init__(self, *, container_id: str, id: str | None = None, classes: str | None = None,):
+    def __init__(self, *, container_id: str, id: str | None = None, classes: str | None = None, ):
         super().__init__(id=id, classes=classes)
         self.container_id = container_id
 
@@ -20,5 +20,9 @@ class ContainerMemoryUsagePlot(TimeSeriesPlot):
             self.border_title = f"Memory Usage - <No Data>%"
             return [], []
 
-        self.border_title = f"Memory Usage - {stats.memory_usage[-1].value:.2f} MB"
-        return [p.value for p in stats.memory_usage], [p.timestamp for p in stats.memory_usage]
+        self.border_title = f"Memory Usage - {self._to_mb(stats.memory_usage[-1].value):.2f} MB"
+        return [p.timestamp for p in stats.memory_usage], [self._to_mb(p.value) for p in stats.memory_usage]
+
+    @staticmethod
+    def _to_mb(bytes_value: int) -> float:
+        return bytes_value / 1024. / 1024.

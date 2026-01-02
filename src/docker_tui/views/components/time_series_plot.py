@@ -1,15 +1,13 @@
-﻿from abc import ABC, abstractmethod
+﻿from abc import abstractmethod
 from datetime import datetime
 from typing import List
 
-from textual import work
 from textual.app import ComposeResult
 from textual.widget import Widget
 from textual_plotext import PlotextPlot
 
 
 class TimeSeriesPlot(Widget):
-
     DEFAULT_CSS = """
             TimeSeriesPlot{
                 border: blank $primary;
@@ -18,7 +16,7 @@ class TimeSeriesPlot(Widget):
             }
         """
 
-    def __init__(self, *, id: str | None = None, classes: str | None = None,):
+    def __init__(self, *, id: str | None = None, classes: str | None = None, ):
         super().__init__(id=id, classes=classes)
         self.plotext = PlotextPlot(id="plot-host")
         self.plt = self.plotext.plt
@@ -37,9 +35,9 @@ class TimeSeriesPlot(Widget):
     def add_data(self):
         self.plt.clear_data()
 
-        (xs,ys) = self.get_data()
+        (xs, ys) = self.get_data()
 
-        self.plt.plot([y.strftime("%d/%m/%Y %H:%M:%S") for y in ys], [x for x in xs])
+        self.plt.plot([x.strftime("%d/%m/%Y %H:%M:%S") for x in xs], [y for y in ys])
         self.plotext.refresh()
 
     @abstractmethod

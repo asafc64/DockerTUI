@@ -14,6 +14,7 @@ from textual.widgets import DataTable
 from docker_tui.apis.docker_api import stop_container, restart_container, delete_container
 from docker_tui.apis.models import Container
 from docker_tui.services.containers_stats_monitor import ContainersStatsMonitor, ContainerStats
+from docker_tui.utils.formating import file_size
 from docker_tui.views.components.containers_log import ContainersLog
 from docker_tui.views.components.dual_pane_container import DualPaneContainer, PaneLayout
 from docker_tui.views.components.responsive_table import ResponsiveTable, ColumnDefinition, Data, Row, Cell
@@ -293,8 +294,8 @@ class ContainersListPage(Page):
         text_style = "" if is_active else self._muted_text_color
         icon = '●' if is_active else '○'
         name = c.name if not is_grouped else ("└─ " if is_last_in_group else "├─ ") + c.service
-        cpu = f"{s.cpu_usage[-1].value:.2f}%" if s else ""
-        memory = f"{s.memory_usage[-1].value:.2f} MB" if s else ""
+        cpu = f"{s.cpu_usage[-1].value:.1f}%" if s else ""
+        memory = file_size(s.memory_usage[-1].value) if s else ""
         return [
             Cell("icon", Text(icon, style=icon_style)),
             Cell("name", Text(name, style=text_style)),
