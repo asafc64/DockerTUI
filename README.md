@@ -33,7 +33,7 @@ and based on [Textual](https://github.com/Textualize/textual).
 
 - **Container files view**</br>
   Presents a filesystem view similar to ls, showing added, modified, and deleted files, with clear indication of mounted
-  volumes.
+  volumes. Supports editing text files, and deleting files and folders.
 
 - **Container details and stats view**</br>
   Combines container configuration details with runtime statistics, including CPU and memory usage.

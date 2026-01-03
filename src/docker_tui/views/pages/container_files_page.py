@@ -3,14 +3,18 @@
 from rich.text import Text
 from textual import work, on, events
 from textual.app import ComposeResult
+from textual.binding import Binding
 from textual.reactive import Reactive
 from textual.widgets import DataTable, Label
 
 from docker_tui.apis.docker_api import get_container_changes, get_container_details
 from docker_tui.apis.models import ContainerFsChangeKind
-from docker_tui.services.container_filesystem_explorer import list_container_files, FsEntry
+from docker_tui.services.container_filesystem_explorer import list_container_files, FsEntry, read_container_file, \
+    write_container_file, delete_container_file
+from docker_tui.utils.external_files_editor import edit_text
 from docker_tui.utils.formating import file_size, ago
 from docker_tui.views.components.responsive_table import ResponsiveTable, ColumnDefinition, Data, Row, Cell
+from docker_tui.views.modals.action_verification_modal import ActionVerificationModal
 from docker_tui.views.pages.page import Page
 
 
@@ -25,6 +29,12 @@ class ContainerFilesPage(Page):
         }
     """
 
+    BINDINGS = [
+        Binding("f5", "refresh", "Refresh", group=Binding.Group("Actions")),
+        Binding("f2", "edit_file", "Edit", group=Binding.Group("Actions")),
+        Binding("delete", "delete_file", "Delete", group=Binding.Group("Actions"))
+    ]
+
     path: Reactive[str] = Reactive("/")
 
     def __init__(self, container_name: str, container_id: str):
@@ -36,7 +46,7 @@ class ContainerFilesPage(Page):
             columns=[
                 ColumnDefinition("mode", "Mode", "11", 1),
                 ColumnDefinition("name", "Name", "3fr", 0, min_width=50),
-                ColumnDefinition("tag", "Tag", "1fr", 2),
+                ColumnDefinition("tag", "Tag", "1fr", 2, min_width=5),
                 ColumnDefinition("size", "Size", "1fr", 3),
                 ColumnDefinition("modified", "Modified", "1fr", 4),
                 ColumnDefinition("user", "User", "1fr", 5),
@@ -65,11 +75,48 @@ class ContainerFilesPage(Page):
         if file.is_directory:
             self.path = file.path
 
+    @work
+    async def action_refresh(self):
+        self._populate_table()
+
+    @work
+    async def action_edit_file(self):
+        file = self.files[self.table.get_selected_row_key()]
+        if not file.is_file:
+            self.notify("Only regular files are editable", severity="warning")
+            return
+
+        file_bytes = await read_container_file(container_id=self.container_id, path=file.path)
+        new_txt = edit_text(file_bytes.decode(), file.name)
+        new_file_bytes = new_txt.encode()
+        if new_file_bytes != file_bytes:
+            await write_container_file(container_id=self.container_id, path=file.path, content=new_file_bytes)
+            self.notify("File Saved")
+
+    @work
+    async def action_delete_file(self):
+        file = self.files[self.table.get_selected_row_key()]
+        f_type = file.file_type
+        approved = await self.app.push_screen_wait(ActionVerificationModal(
+            title=f"Are you sure you want to delete {f_type.lower()} '{file.path}'?",
+            button_text="Delete",
+            button_variant="error"
+        ))
+        if not approved:
+            return
+
+        try:
+            await delete_container_file(container_id=self.container_id, path=file.path)
+            self.notify(title="Deletion Succeeded", message=f"{f_type} '{file.path}' was successfully deleted")
+            self._populate_table()
+        except Exception as ex:
+            self.notify(title="Deletion Failed", message=str(ex), severity="error")
+
     def watch_path(self, old_value: str, new_value: str):
         self.path_label.update(new_value)
         self._populate_table(select_file=old_value)
 
-    def _on_key(self, event: events.Key) -> None:
+    def on_key(self, event: events.Key) -> None:
         if (event.key == "escape" or event.key == "backspace") and not self._is_root():
             self.path = self._get_parent_path(self.path)
             event.prevent_default()
@@ -95,7 +142,11 @@ class ContainerFilesPage(Page):
         except Exception as ex:
             self.table.loading = False
             self.notify(title="Failed to list files", message=str(ex), severity="error")
+            # rollback path value in case navigation failed
+            self.path = self._get_parent_path(next(iter(self.files.keys())))
             return
+
+        select_file = select_file or self.table.get_selected_row_key()
 
         data = Data(rows=[])
 
@@ -105,7 +156,7 @@ class ContainerFilesPage(Page):
                     Cell("mode", Text(entry.mode)),
                     Cell("name", Text(entry.name)),
                     Cell("tag", self._get_tag(entry.path)),
-                    Cell("size", Text(file_size(entry.size)) if entry.is_file else Text("")),
+                    Cell("size", Text(file_size(entry.size)) if not entry.is_directory else Text("")),
                     Cell("modified", Text(ago(entry.modified))),
                     Cell("user", Text(entry.user)),
                     Cell("group", Text(entry.group))
