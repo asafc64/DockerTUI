@@ -5,6 +5,7 @@ from rich.text import Text
 from textual import events
 from textual.app import ComposeResult
 from textual.layouts.horizontal import HorizontalLayout
+from textual.timer import Timer
 from textual.widget import Widget
 from textual.widgets import Static, DataTable
 
@@ -30,13 +31,19 @@ class Cell:
 class Row:
     cells: List[Cell]
     row_key: str
-    type_to_select: str
+    type_to_select_cell: str
     selected: bool = False
+
+    def __getitem__(self, key) -> Cell:
+        return next((r for r in self.cells if r.col_key == key))
 
 
 @dataclass
 class Data:
     rows: List[Row]
+
+    def __getitem__(self, key) -> Row:
+        return next((r for r in self.rows if r.row_key == key))
 
 
 class MockHeader(Static):
@@ -72,6 +79,8 @@ class ResponsiveTable(Widget):
         self.visible_columns_keys: List[str] = []
         self.table = DataTable(id="inner-table", cursor_type='row')
         self.type_to_select = TypeToSelect()
+        self.marked_row_keys: List[str] = []
+        self.unmark_timer: Timer | None = None
 
     def compose(self) -> ComposeResult:
         yield self.table
@@ -86,20 +95,46 @@ class ResponsiveTable(Widget):
         self.table.focus()
 
     def on_key(self, event: events.Key) -> None:
-        def row_match(row: Row, txt: str) -> bool:
-            return row.type_to_select and row.type_to_select.lower().startswith(txt.lower())
-
         if not event.character:
             return
 
-        sequence = self.type_to_select.register_key_press(key=event.character)
+        self._unmark_all_rows()
+
+        sequence = self.type_to_select.register_key_press(key=event.character).lower()
 
         from_idx = self.table.cursor_row + 1
         reordered_rows = self._data.rows[from_idx:] + self._data.rows[:from_idx]
 
-        next_match_row_key = next((r.row_key for r in reordered_rows if row_match(r, sequence)), None)
-        if next_match_row_key:
-            self.select_row(row_key=next_match_row_key)
+        for row in reordered_rows:
+            cell = row[row.type_to_select_cell]
+            cell_str = cell.value.plain.lower()
+            match_start_idx = cell_str.find(sequence)
+            if match_start_idx < 0:
+                continue
+
+            new_text = cell.value.copy()
+            new_text.stylize("underline", match_start_idx, match_start_idx + len(sequence))
+
+            self.marked_row_keys.append(row.row_key)
+            self.table.update_cell(row_key=row.row_key,
+                                   column_key=cell.col_key,
+                                   value=new_text)
+
+        if self.marked_row_keys:
+            self.select_row(row_key=self.marked_row_keys[0])
+
+        if self.unmark_timer:
+            self.unmark_timer.stop()
+        self.unmark_timer = self.set_timer(0.5, self._unmark_all_rows)
+
+    def _unmark_all_rows(self):
+        self.unmark_timer = None
+        for row_key in self.marked_row_keys:
+            row = self._data[row_key]
+            cell = row[row.type_to_select_cell]
+            self.table.update_cell(row_key=row_key, column_key=cell.col_key, value=cell.value)
+
+        self.marked_row_keys = []
 
     def update_table(self, data: Data):
         self._data = data

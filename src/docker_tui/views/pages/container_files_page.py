@@ -162,7 +162,7 @@ class ContainerFilesPage(Page):
                     Cell("group", Text(entry.group))
                 ],
                 row_key=entry.path,
-                type_to_select=entry.name,
+                type_to_select_cell="name",
                 selected=select_file == entry.path
             ))
 
@@ -176,7 +176,7 @@ class ContainerFilesPage(Page):
                         Cell("tag", self._get_tag(path))
                     ],
                     row_key=path,
-                    type_to_select=name
+                    type_to_select_cell="name"
                 ))
 
         data.rows = sorted(data.rows, key=lambda e: e.row_key)
