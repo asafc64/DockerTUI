@@ -40,7 +40,8 @@ class ImageListPage(Page):
                 ColumnDefinition("id", "Id", "1fr", 5, min_width=12),
                 ColumnDefinition("created_at", "Created At", "1fr", 3),
                 ColumnDefinition("size", "Size", "1fr", 4),
-            ])
+            ],
+            type_to_select_column_key="name")
         self.default_selected_image_id = select_image_id
 
     def compose(self) -> ComposeResult:
@@ -117,8 +118,7 @@ class ImageListPage(Page):
                 Cell("created_at", Text(ago(image.created_at))),
                 Cell("size", Text(file_size(image.size)))
             ]
-            data.rows.append(Row(cells=cells, row_key=f"{image.id};{image.name}", type_to_select_cell="name",
-                                 selected=selected))
+            data.rows.append(Row(cells=cells, row_key=f"{image.id};{image.name}", selected=selected))
 
         self.table.update_table(data=data)
         self.table.focus()

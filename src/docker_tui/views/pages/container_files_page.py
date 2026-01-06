@@ -51,7 +51,8 @@ class ContainerFilesPage(Page):
                 ColumnDefinition("modified", "Modified", "1fr", 4),
                 ColumnDefinition("user", "User", "1fr", 5),
                 ColumnDefinition("group", "Group", "1fr", 6),
-            ]
+            ],
+            type_to_select_column_key="name"
         )
         self.changes: Dict[str, ContainerFsChangeKind] | None = None
         self.volumes: List[str] | None = None
@@ -162,7 +163,6 @@ class ContainerFilesPage(Page):
                     Cell("group", Text(entry.group))
                 ],
                 row_key=entry.path,
-                type_to_select_cell="name",
                 selected=select_file == entry.path
             ))
 
@@ -175,8 +175,7 @@ class ContainerFilesPage(Page):
                         Cell("name", Text(name)),
                         Cell("tag", self._get_tag(path))
                     ],
-                    row_key=path,
-                    type_to_select_cell="name"
+                    row_key=path
                 ))
 
         data.rows = sorted(data.rows, key=lambda e: e.row_key)

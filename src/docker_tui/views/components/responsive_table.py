@@ -1,5 +1,5 @@
 ﻿from dataclasses import dataclass
-from typing import List
+from typing import List, Dict
 
 from rich.text import Text
 from textual import events
@@ -31,7 +31,6 @@ class Cell:
 class Row:
     cells: List[Cell]
     row_key: str
-    type_to_select_cell: str
     selected: bool = False
 
     def __getitem__(self, key) -> Cell:
@@ -72,14 +71,15 @@ class ResponsiveTable(Widget):
         }
     """
 
-    def __init__(self, id: str, columns: list[ColumnDefinition]):
+    def __init__(self, id: str, columns: list[ColumnDefinition], type_to_select_column_key: str):
         super().__init__(id=id)
+        self.type_to_select_column_key = type_to_select_column_key
         self._data: Data = Data(rows=[])
         self.columns = columns
         self.visible_columns_keys: List[str] = []
         self.table = DataTable(id="inner-table", cursor_type='row')
         self.type_to_select = TypeToSelect()
-        self.marked_row_keys: List[str] = []
+        self.marked_cells: Dict[str, Dict[str, Text]] = {}
         self.unmark_timer: Timer | None = None
 
     def compose(self) -> ComposeResult:
@@ -98,30 +98,19 @@ class ResponsiveTable(Widget):
         if not event.character:
             return
 
-        self._unmark_all_rows()
-
         sequence = self.type_to_select.register_key_press(key=event.character).lower()
 
         from_idx = self.table.cursor_row + 1
         reordered_rows = self._data.rows[from_idx:] + self._data.rows[:from_idx]
 
-        for row in reordered_rows:
-            cell = row[row.type_to_select_cell]
-            cell_str = cell.value.plain.lower()
-            match_start_idx = cell_str.find(sequence)
-            if match_start_idx < 0:
-                continue
+        next_match_row_key = next((r.row_key
+                                   for r in reordered_rows
+                                   if sequence in r[self.type_to_select_column_key].value.plain.lower()),
+                                  None)
+        if next_match_row_key:
+            self.select_row(row_key=next_match_row_key)
 
-            new_text = cell.value.copy()
-            new_text.stylize("underline", match_start_idx, match_start_idx + len(sequence))
-
-            self.marked_row_keys.append(row.row_key)
-            self.table.update_cell(row_key=row.row_key,
-                                   column_key=cell.col_key,
-                                   value=new_text)
-
-        if self.marked_row_keys:
-            self.select_row(row_key=self.marked_row_keys[0])
+        self._invalidate_table()
 
         if self.unmark_timer:
             self.unmark_timer.stop()
@@ -129,37 +118,57 @@ class ResponsiveTable(Widget):
 
     def _unmark_all_rows(self):
         self.unmark_timer = None
-        for row_key in self.marked_row_keys:
-            row = self._data[row_key]
-            cell = row[row.type_to_select_cell]
-            self.table.update_cell(row_key=row_key, column_key=cell.col_key, value=cell.value)
+        self.type_to_select.force_reset()
+        self._invalidate_table()
 
-        self.marked_row_keys = []
+    def _get_cell_widget(self, cell: Cell) -> Text:
+        if cell.col_key != self.type_to_select_column_key:
+            return cell.value
+
+        typed_sequence = self.type_to_select.get_sequence()
+        if not typed_sequence:
+            return cell.value
+
+        cell_str = cell.value.plain.lower()
+        match_start_idx = cell_str.find(typed_sequence)
+        if match_start_idx < 0:
+            return cell.value
+
+        new_widget = cell.value.copy()
+        new_widget.stylize("underline", match_start_idx, match_start_idx + len(typed_sequence))
+        return new_widget
 
     def update_table(self, data: Data):
         self._data = data
+        self._invalidate_table(update_selection=True)
 
-        for row in data.rows:
+    def _invalidate_table(self, update_selection=False):
+        for row in self._data.rows:
             relevant_sorted_cells = self._get_cells_to_insert(cells=row.cells)
 
             # update existing rows
             if self._is_row_in_table(row_key=row.row_key):
                 for cell in relevant_sorted_cells:
-                    self.table.update_cell(row_key=row.row_key, column_key=cell.col_key, value=cell.value)
+                    widget = self._get_cell_widget(cell=cell)
+                    current_widget = self.table.get_cell(row_key=row.row_key, column_key=cell.col_key)
+                    if widget == current_widget:
+                        continue
+                    self.table.update_cell(row_key=row.row_key, column_key=cell.col_key, value=widget)
 
             # add missing rows
             else:
-                self.table.add_row(*(c.value for c in relevant_sorted_cells), key=row.row_key)
+                self.table.add_row(*(self._get_cell_widget(cell=c) for c in relevant_sorted_cells), key=row.row_key)
 
         # remove unwanted rows
-        rows_keys_to_remove = set([k.value for k in self.table.rows.keys()]) - set([r.row_key for r in data.rows])
+        rows_keys_to_remove = set([k.value for k in self.table.rows.keys()]) - set([r.row_key for r in self._data.rows])
         for row_key in rows_keys_to_remove:
             self.table.remove_row(row_key=row_key)
 
         # update selected row
-        selected_row_index = next((i for i, r in enumerate(data.rows) if r.selected), None)
-        if selected_row_index is not None:
-            self.table.move_cursor(row=selected_row_index)
+        if update_selection:
+            selected_row_key = next((r.row_key for r in self._data.rows if r.selected), None)
+            if selected_row_key is not None:
+                self.select_row(row_key=selected_row_key)
 
     def get_selected_row_index(self) -> int:
         return self.table.cursor_row
