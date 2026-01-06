@@ -18,6 +18,10 @@ class TypeToSelect:
         self._type_buffer = ""
         self._last_key_time = None
 
+    def force_reset(self):
+        self._type_buffer = ""
+        self._last_key_time = None
+
     def register_key_press(self, key: str) -> str:
         now = time.time()
 
@@ -32,3 +36,7 @@ class TypeToSelect:
             self._type_buffer += key
 
         return self._type_buffer
+
+    def get_sequence(self) -> str:
+        now = time.time()
+        return "" if self._last_key_time and now - self._last_key_time > 0.5 else self._type_buffer

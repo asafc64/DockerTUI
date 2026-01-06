@@ -61,7 +61,8 @@ class ContainersListPage(Page):
                 ColumnDefinition("cpu", "CPU", "1fr", 5),
                 ColumnDefinition("mem", "Memory", "1fr", 6),
                 ColumnDefinition("status", "Status", "1fr", 2),
-            ])
+            ],
+            type_to_select_column_key="name")
         self.default_selected_container_id = select_container_id or self.last_selected_container_id
 
     def compose(self) -> ComposeResult:
@@ -254,8 +255,7 @@ class ContainersListPage(Page):
             if project_name:
                 cells = self._build_project_row(name=project_name, containers=project_containers)
                 grouped = True
-                data.rows.append(Row(cells=cells, row_key=self.PROJECT_ROW_KEY_PREFIX + project_name,
-                                     type_to_select=project_name))
+                data.rows.append(Row(cells=cells, row_key=self.PROJECT_ROW_KEY_PREFIX + project_name))
 
             for i, c in enumerate(project_containers):
                 row_key = f"{c.id};{c.name}"
@@ -264,7 +264,7 @@ class ContainersListPage(Page):
                 cells = self._build_container_row(c=c, s=stats, is_grouped=grouped,
                                                   is_last_in_group=(i == len(project_containers) - 1))
                 data.rows.append(
-                    Row(cells=cells, row_key=row_key, type_to_select=c.service or c.name, selected=selected))
+                    Row(cells=cells, row_key=row_key, selected=selected))
 
         self.table.update_table(data=data)
         self.table.focus()
