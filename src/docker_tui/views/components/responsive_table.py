@@ -1,4 +1,5 @@
-﻿from dataclasses import dataclass
+﻿import re
+from dataclasses import dataclass
 from typing import List, Dict
 
 from rich.text import Text
@@ -105,7 +106,7 @@ class ResponsiveTable(Widget):
 
         next_match_row_key = next((r.row_key
                                    for r in reordered_rows
-                                   if sequence in r[self.type_to_select_column_key].value.plain.lower()),
+                                   if self._find_in_cell(cell=r[self.type_to_select_column_key], sequence=sequence)),
                                   None)
         if next_match_row_key:
             self.select_row(row_key=next_match_row_key)
@@ -121,6 +122,12 @@ class ResponsiveTable(Widget):
         self.type_to_select.force_reset()
         self._invalidate_table()
 
+    @staticmethod
+    def _find_in_cell(cell: Cell, sequence: str) -> re.Match | None:
+        text = cell.value.plain.lower()
+        pattern = rf"(?<![A-Za-z0-9]){re.escape(sequence)}"
+        return re.search(pattern, text)
+
     def _get_cell_widget(self, cell: Cell) -> Text:
         if cell.col_key != self.type_to_select_column_key:
             return cell.value
@@ -129,13 +136,12 @@ class ResponsiveTable(Widget):
         if not typed_sequence:
             return cell.value
 
-        cell_str = cell.value.plain.lower()
-        match_start_idx = cell_str.find(typed_sequence)
-        if match_start_idx < 0:
+        match = self._find_in_cell(cell=cell, sequence=typed_sequence)
+        if not match:
             return cell.value
 
         new_widget = cell.value.copy()
-        new_widget.stylize("underline", match_start_idx, match_start_idx + len(typed_sequence))
+        new_widget.stylize("underline", match.start(), match.end())
         return new_widget
 
     def update_table(self, data: Data):
